@@ -90,7 +90,7 @@ def impute_nans(
     numerical_columns: list,
     categorical_columns: list,
     imp_strategy_numerical: str = "median",
-    imp_strategy_categorical: str = "most_frequent",
+    imp_strategy_categorical: str = "KNNImputer",
     print_results: bool = True
 ):
     """
