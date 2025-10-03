@@ -40,7 +40,59 @@ To check (Natalia):
 - class esta en categorical, seria mejor sacarla para no hacer ningun procesamiento a esa columna, tambien deberiamos cambiar la de is_train
 '''
 
-def impute_nans(df: pd.DataFrame, numerical_columns: list, categorical_columns: list, imp_strategy_numerical: str = 'median', imp_strategy_categorical: str = 'most_frequent', print_results: bool = True):
+def impute_categorical(
+    df: pd.DataFrame,
+    categorical_columns: list,
+    imp_strategy_categorical: str = "most_frequent"
+):
+    # Perform categorical data imputation
+    if imp_strategy_categorical == "KNNImputer":
+        # Encoding
+        df_encoded = pd.DataFrame(index=df.index)
+        encoders = {}
+        for col in categorical_columns:
+            le = LabelEncoder()
+            df_notnull = df[col].dropna()
+            le.fit(df_notnull) # Fit with no null values
+            encoders[col] = le
+            df_encoded[col] = df[col].map(lambda x: le.transform([x])[0] if pd.notna(x) else np.nan)
+        # KNN
+        imp_categorical = KNNImputer(n_neighbors=5)
+        df_imputed_num = pd.DataFrame(imp_categorical.fit_transform(df_encoded), columns = categorical_columns, index=df.index)
+        # Decoding
+        for col in categorical_columns:
+            le = encoders[col]
+            df[col] = df_imputed_num[col].round().astype(int)
+            df[col] = le.inverse_transform(df[col])
+        
+    elif imp_strategy_categorical == "most_frequent":
+        imp_categorical = SimpleImputer(missing_values=np.nan, strategy=imp_strategy_categorical)
+        for col in categorical_columns:
+            df[col] = imp_categorical.fit_transform(df[[col]]).ravel()
+    else:
+        raise ValueError(f"Invalid imputation strategy for categorical data: {imp_strategy_categorical}")
+
+    return df
+
+
+def impute_numerical(
+    df: pd.DataFrame,
+    numerical_columns: list,
+    imp_strategy_numerical: str = "median"
+):
+    imp_numerical = SimpleImputer(missing_values=np.nan, strategy=imp_strategy_numerical)
+    for col in numerical_columns:
+        df[col] = imp_numerical.fit_transform(df[[col]]).ravel()
+    return df
+
+def impute_nans(
+    df: pd.DataFrame,
+    numerical_columns: list,
+    categorical_columns: list,
+    imp_strategy_numerical: str = "median",
+    imp_strategy_categorical: str = "most_frequent",
+    print_results: bool = True
+):
     """
     Remove missing values using imputation
     
@@ -56,37 +108,12 @@ def impute_nans(df: pd.DataFrame, numerical_columns: list, categorical_columns: 
     df_copy = df.copy()
 
     # Perform numerical data imputation
-    imp_numerical = SimpleImputer(missing_values=np.nan, strategy=imp_strategy_numerical)
-    for col in numerical_columns:
-        df_copy[col] = imp_numerical.fit_transform(df[[col]]).ravel()
+    if len(numerical_columns) > 0:
+        df_copy = impute_numerical(df_copy, numerical_columns=numerical_columns, imp_strategy_numerical=imp_strategy_numerical)
     
-    # Perform categorical data imputation
-    if imp_strategy_categorical == 'KNNImputer':
-        # Encoding
-        df_encoded = pd.DataFrame(index=df.index)
-        encoders = {}
-        for col in categorical_columns:
-            le = LabelEncoder()
-            df_notnull = df_copy[col].dropna()
-            le.fit(df_notnull) # Fit with no null values
-            encoders[col] = le
-            df_encoded[col] = df[col].map(lambda x: le.transform([x])[0] if pd.notna(x) else np.nan)
-        # KNN
-        imp_categorical = KNNImputer(n_neighbors=5)
-        df_imputed_num = pd.DataFrame(imp_categorical.fit_transform(df_encoded), columns = categorical_columns, index=df.index)
-        # Decoding
-        for col in categorical_columns:
-            le = encoders[col]
-            df_copy[col] = df_imputed_num[col].round().astype(int)
-            df_copy[col] = le.inverse_transform(df_copy[col])
-        
-    elif imp_strategy_categorical == 'most_frequent':
-        imp_categorical = SimpleImputer(missing_values=np.nan, strategy=imp_strategy_categorical)
-        for col in categorical_columns:
-            df_copy[col] = imp_categorical.fit_transform(df[[col]]).ravel()
-    else:
-        raise ValueError(f"Invalid imputation strategy for categorical data: {imp_strategy_categorical}")
-    
+    if len(categorical_columns) > 0:
+        df_copy = impute_categorical(df_copy, categorical_columns=categorical_columns, imp_strategy_categorical=imp_strategy_categorical)
+
     # Find rows with NaN values
     nan_mask = df.isnull().any(axis=1)
     nan_rows = df[nan_mask]
@@ -130,7 +157,8 @@ def normalize_data(df: pd.DataFrame, numerical_columns: list, categorical_column
         elif len(unique_vals) > 2:
             ohe = OneHotEncoder(
                 sparse_output=False, 
-                handle_unknown='ignore'
+                handle_unknown='ignore',
+                dtype = np.int8
             )
             transformed = ohe.fit_transform(df[[col]].astype(str))
             
@@ -144,15 +172,34 @@ def normalize_data(df: pd.DataFrame, numerical_columns: list, categorical_column
 
     return df_out
 
-def preprocess_dataset(df: pd.DataFrame, imp_strategy_numerical='median', imp_strategy_categorical='', print_results=False):
-    df = df.replace({b"?": np.nan})
+def preprocess_dataset(
+    df: pd.DataFrame,
+    imp_strategy_numerical:str ="median",
+    imp_strategy_categorical: str="KNNImputer",
+    skip_cols: list[str] = ["is_train", "class", "a17"],
+    print_results: bool=False
+):
+    # df = df.replace({b"?": np.nan}) FIXME: this is not needed, as it is already done when converting from arff to pd
   
     # Divide columns in numerical and categorical
-    numerical_columns = df.select_dtypes(include=['number']).columns.tolist()
-    categorical_columns = df.select_dtypes(include=['object']).columns.tolist()
+    numerical_columns = [col for col in df.select_dtypes(include=["number"]).columns.tolist() if col not in skip_cols]
+    categorical_columns = [col for col in df.select_dtypes(include=["object"]).columns.tolist() if col not in skip_cols]
 
-    df_clean = impute_nans(df=df, numerical_columns=numerical_columns, categorical_columns=categorical_columns, imp_strategy_numerical = imp_strategy_numerical, imp_strategy_categorical= imp_strategy_categorical, print_results = print_results)
+    df_clean = impute_nans(
+        df=df[[col for col in df.columns if col not in skip_cols]],
+        numerical_columns=numerical_columns,
+        categorical_columns=categorical_columns,
+        imp_strategy_numerical=imp_strategy_numerical,
+        imp_strategy_categorical=imp_strategy_categorical,
+        print_results=print_results
+    )
+    
     df_encoded = normalize_data(df=df_clean, numerical_columns=numerical_columns, categorical_columns=categorical_columns)
+    # Add the columns that we have skipped to the final dataset
+    
+    for col in skip_cols:
+        if col not in df.columns: continue
+        df_encoded[col] = df[col]
 
     return df_encoded
     
