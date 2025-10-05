@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from typing import Literal
 import math
+from collections import Counter
 
 class KIBLearner:
     def __init__(self,
@@ -61,12 +62,40 @@ class KIBLearner:
     def return_nn(self, ordered_dist):
         return ordered_dist[:self.k, -1]
     
+    def modified_plurality(self, nearest_outputs):
+        mp = False
+        list_app = list(sorted(Counter(nearest_outputs).items(), key=lambda x: x[1], reverse=True))
+        while not mp and len(list_app)>1:
+            if list_app[0][1] == list_app[1][1]:
+                nearest_outputs =  nearest_outputs[:-1]
+                list_app = list(sorted(Counter(nearest_outputs).items(), key=lambda x: x[1], reverse=True))
+            else:
+                mp = True
+                return list_app[0][0]
+        if len(list_app)==1:
+            return list_app[0][0]
+
+    
+    def borda_count(self, nearest_outputs):
+        list_bc = [(nearest, len(nearest_outputs)-(i+1)) for i, nearest in enumerate(nearest_outputs)]
+        dic_bc = dict.fromkeys(set(nearest_outputs), 0)
+        for key, weight in list_bc:
+            dic_bc[key] = dic_bc[key] + weight
+        list_bc = list(sorted(dic_bc.items(), key=lambda x: x[1], reverse=True))
+        if len(list_bc)> 1:
+            if list_bc[0][1] == list_bc[1][1]:
+                pass            
+            else:
+                return list_bc[0][0]
+        else:
+            return list_bc[0][0]
+
+    
     def voting_schema(self, nearest_outputs):
         if self.voting == 'mp': # modified plurality
-            pass
+            return self.modified_plurality(nearest_outputs)
         elif self.voting == 'bc': # borda count
-            pass
-        return 0
+            return self.borda_count(nearest_outputs)
     
     
     def update_cd(self, instance, output):
@@ -87,6 +116,7 @@ class KIBLearner:
         for _, instance in test_df.iterrows():
             # Compute similarity metric -> important no passar ultima columna (o la de la classe).
             # Obtain k-nearest neighbors
+            nearest_outputs = self.return_nn(self.compute_distance(instance))
             # Decide output based on voting scheme
             # Update CD based on retention policy
             pass
