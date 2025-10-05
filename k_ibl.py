@@ -82,13 +82,18 @@ class KIBLearner:
         for key, weight in list_bc:
             dic_bc[key] = dic_bc[key] + weight
         list_bc = list(sorted(dic_bc.items(), key=lambda x: x[1], reverse=True))
-        if len(list_bc)> 1:
-            if list_bc[0][1] == list_bc[1][1]:
-                pass            
-            else:
-                return list_bc[0][0]
-        else:
-            return list_bc[0][0]
+        # TODO tenir en compte casos en que hi ha empats.
+        # if len(list_bc)> 1:
+        #     if list_bc[0][1] == list_bc[1][1]:
+        #         dic_app = (sorted(Counter(nearest_outputs).items(), key=lambda x: x[1], reverse=True))
+        #         if dic_app[list_bc[0][0]] == dic_app[list_bc[1][0]]:
+                    
+        #         else:
+                             
+        #     else:
+        #         return list_bc[0][0]
+        # else:
+        return list_bc[0][0]
 
     
     def voting_schema(self, nearest_outputs):
@@ -102,9 +107,14 @@ class KIBLearner:
         if self.retention == "nr":
             return
         elif self.retention == "ar":
-            pass
+            instance_corrected = instance
+            instance_corrected[-1]=output
+            self.CD.append(instance_corrected)
         elif self.retention == "dc":
-            pass
+            if output != instance[-1]:
+                instance_corrected = instance
+                instance_corrected[-1]=output
+                self.CD.append(instance_corrected)
         elif self.retention == "dd":
             pass
     
@@ -118,8 +128,9 @@ class KIBLearner:
             # Obtain k-nearest neighbors
             nearest_outputs = self.return_nn(self.compute_distance(instance))
             # Decide output based on voting scheme
+            output = self.voting_schema(nearest_outputs)
             # Update CD based on retention policy
-            pass
+            self.update_cd(instance, output)
         
         
     def predict(self, X: pd.DataFrame):
