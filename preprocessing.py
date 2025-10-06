@@ -176,7 +176,8 @@ def preprocess_dataset(
     df: pd.DataFrame,
     imp_strategy_numerical:str ="median",
     imp_strategy_categorical: str="KNNImputer",
-    skip_cols: list[str] = ["is_train", "class", "a17"],
+    skip_cols: list[str] = ["is_train", "a17"],
+    target_cols: list[str] = ["class", "a17"],
     print_results: bool=False
 ):
     # df = df.replace({b"?": np.nan}) FIXME: this is not needed, as it is already done when converting from arff to pd
@@ -200,7 +201,12 @@ def preprocess_dataset(
     for col in skip_cols:
         if col not in df.columns: continue
         df_encoded[col] = df[col]
-
+    
+    for col in target_cols:
+        # Add the target column at the end of the dataframe (for clarity purposes)
+        if col not in df.columns: continue
+        df_encoded = df_encoded[[c for c in df_encoded.columns if c != col] + [col]]
+ 
     return df_encoded
     
 
