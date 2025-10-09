@@ -145,9 +145,20 @@ class KIBLearner:
     def __gwhsm(self, x1, x2) -> np.ndarray: #FIXME: input ??
        # TODO: perhaps remove?
         pass
+
+    # def train_condensation
+
+    # def train_edition
     
-    def __train(self, df: pd.DataFrame):
-        self.CD = df.to_numpy()
+    # def train_hybrid
+
+    
+    def __train(self, df: pd.DataFrame, red_technique: Literal["None", "MCNN", "AllKNN", "ICF"]):
+        data = df.to_numpy()
+        if red_technique == 'None':
+            self.CD = data
+        elif red_technique == 'MCNN': # cridarem les diferents funcions de train segons la reduction technique
+            pass
         
         # When loading the train dataset, we can determine whether each column is discrete or continuous
         for i, col in enumerate(df.columns):
@@ -159,7 +170,7 @@ class KIBLearner:
             else:
                 raise ValueError(f"Unkown column type: {type(col_element)}")
             
-    
+        
     
     def compute_distance(self, instance: np.ndarray) -> np.ndarray:
         if self.sim_metric == "euc":
@@ -269,10 +280,20 @@ class KIBLearner:
             if d>= self.threshold:
                 self.CD = np.append(self.CD, instance.reshape(1, -1), axis=0)
         
-    
-    def kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> list[int]:
-        self.__train(train_df)
         
+    """ def ir_KIBLAlgorithm(...) # kibl amb les diferents instance reduction techniques
+        # una reducció
+        self.__train(train_df)
+        self.__kIBLAlgorithm()
+    
+    def KIBLAlgorithm(...) # "substitueix" a la kiblalgorithm que teniem abans
+        # cap reducció
+        self.__train(train_df)
+        self.__kIBLAlgorithm() """
+    
+    
+    
+    def __kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> list[int]:
         predictions = []
         for _, instance in test_df.iterrows():
             instance = instance.to_numpy()
