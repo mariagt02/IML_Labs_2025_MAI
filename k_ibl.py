@@ -12,13 +12,15 @@ class KIBLearner:
         sim_metric: Literal["euc", "cos", "heom", "ivdm", "gwhsm"],
         k: int,
         voting: Literal["mp", "bc"], # modified plurality, borda count
-        retention: Literal["nr", "ar", "dc", "dd"] # Never Retain, Always Retain, Different Class, Degree of Disagreement
+        retention: Literal["nr", "ar", "dc", "dd"], # Never Retain, Always Retain, Different Class, Degree of Disagreement
+        threshold: float = 0.5
     ):
         
         self.sim_metric = sim_metric
         self.k = k
         self.voting = voting
         self.retention = retention
+        self.threshold = threshold
         
         self.CD: np.ndarray = None # TODO: think of a more efficient data structure
 
@@ -193,19 +195,34 @@ class KIBLearner:
         for key, weight in list_bc:
             dic_bc[key] = dic_bc[key] + weight
         list_bc = list(sorted(dic_bc.items(), key=lambda x: x[1], reverse=True))
-        # TODO tenir en compte casos en que hi ha empats.
-        # if len(list_bc)> 1:
-        #     if list_bc[0][1] == list_bc[1][1]:
-        #         dic_app = (sorted(Counter(nearest_outputs).items(), key=lambda x: x[1], reverse=True))
-        #         if dic_app[list_bc[0][0]] == dic_app[list_bc[1][0]]:
-                    
-        #         else:
-                             
-        #     else:
-        #         return list_bc[0][0]
-        # else:
-        return list_bc[0][0]
-
+        tied = [num for i, (num, weight) in enumerate(list_bc) if weight == list_bc[0][1]]
+        if len(tied)>1:
+            dict_app = dict(list(sorted(Counter(nearest_outputs).items(), key=lambda x: x[1], reverse=True)))
+            max_ = 0
+            tied2bool = False
+            tied2 = []
+            for num in tied:
+                if dict_app[num]>max_:
+                    max_ = dict_app[num]
+                    res = num
+                    tied2bool = False
+                elif dict_app[num] == max_:
+                    tied2bool = True
+                    tied2.append(num)
+            if tied2bool == False:
+                return res
+            else:
+                min_ = nearest_outputs.index(tied2[0])
+                selected = tied2[0]
+                for i in range(1,len(tied2)):
+                    pos = nearest_outputs.index(tied2[i])
+                    if pos<min_:
+                        min_ = pos
+                        selected = tied2[i]
+                return selected
+        else:
+            return list_bc[0][0]
+        
     
     def voting_schema(self, nearest_outputs):
         if self.voting == 'mp': # modified plurality
@@ -214,7 +231,7 @@ class KIBLearner:
             return self.borda_count(nearest_outputs)
     
     
-    def update_cd(self, instance, output):
+    def update_cd(self, instance, output, nearest_outputs):
         if self.retention == "nr":
             return
         
@@ -227,8 +244,31 @@ class KIBLearner:
                 self.CD = np.append(self.CD, instance.reshape(1, -1), axis=0)
         
         elif self.retention == "dd":
-            pass
-    
+            dict_app = dict(list(sorted(Counter(nearest_outputs).items(), key=lambda x: x[1], reverse=True)))
+            tied = [list(dict_app.keys())[0]]
+            max_ = dict_app[list(dict_app.keys())[0]]
+            for key in list(dict_app.keys())[1:]:
+                if dict_app[key]==max_:
+                    tied.append(key)
+                else:
+                    break
+            if len(tied)>1:
+                min_ = nearest_outputs.index(tied[0])
+                majority_class = tied[0]
+                for i in range(1,len(tied)):
+                    pos = nearest_outputs.index(tied[i])
+                    if pos<min_:
+                        min_ = pos
+                        majority_class = tied[i]
+            else:
+                majority_class = tied[0]
+            num_majority_class = dict_app[majority_class]
+            num_remaining_cases = len(nearest_outputs)-num_majority_class
+            num_classes = len(dict_app)
+            d = num_remaining_cases / ((num_classes-1) * num_majority_class)
+            if d>= self.threshold:
+                self.CD = np.append(self.CD, instance.reshape(1, -1), axis=0)
+        
     
     def kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> list[int]:
         self.__train(train_df)
@@ -245,7 +285,7 @@ class KIBLearner:
             predictions.append(output)
             
             # Update CD based on retention policy
-            self.update_cd(instance, output)
+            self.update_cd(instance, output, nearest_outputs)
         
         return predictions
         
