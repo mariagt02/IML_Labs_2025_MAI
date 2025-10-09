@@ -1,4 +1,5 @@
 import numpy as np
+from collections import defaultdict
 
 __all__ = ["IVDM", "HEOM", "GWHSM"]
 
@@ -6,19 +7,23 @@ class IVDM:
     
     @staticmethod
     def compute(
-        x: np.ndarray,
-        y: np.ndarray,
+        instance: np.ndarray,
         data: np.ndarray,
         discrete_cols: list[int],
         continuous_cols: list[int]
-    ) -> float: # Eq (21)
+    ) -> np.ndarray: # Eq (21) // retornem llista amb els punts del CD ordenats de menor a major distància respecte a 'instance'
         
-        total = 0
-        # RETURN (ordered_dist): llista amb totes les instancies de menor a major distancia
-        for a in range(x.shape[1]):
-            total += IVDM.__ivdm_a(x[a], y[a], a, data, discrete_cols, continuous_cols)
+        ivdm_distances = np.zeros(len(data)) # llista amb les distàncies de cada punt del CD a la instance concreta
         
-        return total
+        for idx, point in enumerate(data):
+            # RETURN (ordered_dist): llista amb totes les instancies de menor a major distancia
+            for a in range(instance.shape[1]):
+                ivdm_distances[idx] += IVDM.__ivdm_a(point[a], instance[a], a, data, discrete_cols, continuous_cols)
+        
+        sorted_idx = np.argsort(ivdm_distances) # ordenem les instàncies segons les distàncies obtingudes
+        
+        return data[sorted_idx] 
+            
     
     
     @staticmethod
@@ -80,8 +85,12 @@ class IVDM:
         
         mid_au1 = IVDM.__mid_point(u + 1, a, data)
         
-        P_auc = 0
-        P_au1c = 0
+        probs = IVDM.__learn_P(data, discrete_cols)
+        
+        P_auc = probs[f"{a}_{u}_{c}"]
+        P_au1c = probs[f"{a}_{u + 1}_{c}"] # Pray that this entry exists
+        
+        res = P_auc + ((x - mid_au) / (mid_au1 - mid_au)) * (P_au1c - P_auc)
         
         return res
     
@@ -107,16 +116,32 @@ class IVDM:
 
     
     @staticmethod
-    def __learn_P(a: int, x: float, c: int): # figure 5
-        # TODO: complete
-        pass
+    def __learn_P(data: np.ndarray, discrete_cols: list[int]): # figure 5
+        n_avc = defaultdict(int)
+        n_av = defaultdict(int)
+        p_avc = defaultdict(int)
+        
+        for a in range(data.shape[1]):
+            v_values_attribute = []
+            for instance in data:
+                x = instance[a]
+                v = IVDM.__discretize(x, a, data, discrete_cols) # in which "bin" the value x of attribute a falls into
+                v_values_attribute.append(v) # for each attribute, we save which "bins" we have obtained
+                c = instance[-1]
+                n_avc[f"{a}_{v}_{c}"] += 1 # We implement it as a dictionary because we do not know how to know in advance the possible values of v
+                n_av[f"{a}_{v}"] += 1
+            
+            
+            for v in np.unique(v_values_attribute):
+                for c in np.unique(data[:, -1]):
+                    if n_av[f"{a}_{v}"] == 0:
+                        p_avc[f"{a}_{v}_{c}"] = 0
+                    else:
+                        p_avc[f"{a}_{v}_{c}"] = n_avc[f"{a}_{v}_{c}"] / n_av[f"{a}_{v}"]
+        
+        return p_avc
+            
     
-    
-    
-    
-    
-    
-
 
 class HEOM:
     # TODO: complete if the metric wants to be implemented

@@ -50,7 +50,7 @@ class KIBLearner:
         elif self.sim_metric == "heom":
             return self.__heom() # TODO: complete
         elif self.sim_metric == "ivdm":
-            return self.__ivdm() # TODO: complete
+            return Metrics.IVDM.compute(self.CD, instance, self.discrete_cols, self.continuous_cols) # TODO: complete
         elif self.sim_metric == "gwhsm":
             return self.__gwhsm() # TODO: complete
     
@@ -156,7 +156,8 @@ if __name__ == "__main__":
     
     # exit()
     
-    a = [['euc','cos'],["mp"],[3,5,7], ['nr', 'ar', 'dc']] #FIXME: add missing cases (now they are not completely implemented)
+    a = [['ivdm'],["mp"],[3], ['nr']] #FIXME: add missing cases (now they are not completely implemented)
+    # a = [['euc','cos'],["mp"],[3,5,7], ['nr', 'ar', 'dc']] #FIXME: add missing cases (now they are not completely implemented)
     parameters_combinations = list(itertools.product(*a))
 
     for dataset in ["credit-a", "pen-based"]:
