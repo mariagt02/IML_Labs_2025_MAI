@@ -23,7 +23,7 @@ class IVDM:
         
         for idx, point in enumerate(self.data):
             # RETURN (ordered_dist): llista amb totes les instancies de menor a major distancia
-            for a in range(instance.shape[0]):
+            for a in range(instance.shape[0] - 1): # Do not include the class attribute (last attribute of `instance`)
                 ivdm_distances[idx] += self.__ivdm_a(point[a], instance[a], a)
 
         sorted_idx = np.argsort(ivdm_distances) # ordenem les instàncies segons les distàncies obtingudes

@@ -44,7 +44,7 @@ class KIBLearner:
             pass
         
         # When loading the train dataset, we can determine whether each column is discrete or continuous
-        for i, col in enumerate(df.columns):
+        for i, col in enumerate(df.columns[:-1]):
             col_element = df[col][0]
             if isinstance(col_element, np.integer):
                 self.discrete_cols.append(i)
@@ -221,7 +221,7 @@ if __name__ == "__main__":
     
     # exit()
     
-    a = [['ivdm'],["mp"],[3], ['nr']] #FIXME: add missing cases (now they are not completely implemented)
+    a = [['ivdm'],["bc"],[3], ['nr']] #FIXME: add missing cases (now they are not completely implemented)
     # a = [['euc','cos'],["mp"],[3,5,7], ['nr', 'ar', 'dc']] #FIXME: add missing cases (now they are not completely implemented)
     parameters_combinations = list(itertools.product(*a))
 
