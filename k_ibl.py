@@ -7,6 +7,7 @@ import json
 import itertools
 from sklearn.neighbors import KNeighborsClassifier
 from metrics import Metrics
+from tqdm import tqdm
 
 class KIBLearner:
     def __init__(self,
@@ -52,7 +53,8 @@ class KIBLearner:
             else:
                 raise ValueError(f"Unkown column type: {type(col_element)}")
             
-        
+        if "ivdm" in self.sim_metric:
+            self.ivdm_metric = Metrics.IVDM(self.CD, self.discrete_cols, self.continuous_cols)
     
     def compute_distance(self, instance: np.ndarray) -> np.ndarray:
         if self.sim_metric == "euc":
@@ -62,7 +64,7 @@ class KIBLearner:
         elif self.sim_metric == "heom":
             return self.__heom() # TODO: complete
         elif self.sim_metric == "ivdm":
-            return Metrics.IVDM.compute(self.CD, instance, self.discrete_cols, self.continuous_cols) # TODO: complete
+            return self.ivdm_metric.compute(instance)
         elif self.sim_metric == "gwhsm":
             return self.__gwhsm() # TODO: complete
     
@@ -180,7 +182,7 @@ class KIBLearner:
         self.__train(train_df)
         
         predictions = []
-        for _, instance in test_df.iterrows():
+        for _, instance in tqdm(test_df.iterrows(), total=len(test_df)):
             instance = instance.to_numpy()
             # Compute similarity metric -> important no passar ultima columna (o la de la classe).
             # Obtain k-nearest neighbors
@@ -219,8 +221,8 @@ if __name__ == "__main__":
     
     # exit()
     
-    # a = [['ivdm'],["mp"],[3], ['nr']] #FIXME: add missing cases (now they are not completely implemented)
-    a = [['euc','cos'],["mp"],[3,5,7], ['nr', 'ar', 'dc']] #FIXME: add missing cases (now they are not completely implemented)
+    a = [['ivdm'],["mp"],[3], ['nr']] #FIXME: add missing cases (now they are not completely implemented)
+    # a = [['euc','cos'],["mp"],[3,5,7], ['nr', 'ar', 'dc']] #FIXME: add missing cases (now they are not completely implemented)
     parameters_combinations = list(itertools.product(*a))
 
     for dataset in ["credit-a", "pen-based"]:
