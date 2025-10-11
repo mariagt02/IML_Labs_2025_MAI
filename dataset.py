@@ -172,19 +172,31 @@ class DatasetLoader:
     def _print(self, msg) -> None:
         if self.verbose:
             print(msg)
+    
+    
+    def __iter__(self):
+        """
+        Allows to iterate over the folds in ascending order of fold number
+        """
+        if self.num_folds == 0:
+            self._print(f"{TerminalColor().ERROR} trying to load dataset that has not been loaded yet. Please, call .load() first.")
+            exit(-1)
+        
+        for fold_num in sorted(self.filename_map.keys()):
+            yield self.get_fold(fold_num)
+            
+            
+    def __getitem__(self, index: int):
+        """
+        Allows to access the DatasetLoader in an index-based way.
+        """
+        return self.get_fold(index)
         
 
 
 # if __name__ == "__main__":
-#     dataset = DatasetLoader(dataset_name="pen-based")
-#     dataset_2 = DatasetLoader(dataset_name="test_df", filename_template="{type}_{fold}.{ext}")
-#     dataset_3 = DatasetLoader(dataset_name="test_df_2", filename_template="{whatever}_{type}_{fold:03d}.{ext}")
-
-#     dataset_2.load()
-    
-    
-    
+#     dataset = DatasetLoader(dataset_name="pen-based", verbose=True)
 #     dataset.load()
-#     df_train, df_test = dataset.get_fold(9)
-
-#     dataset_3.load()
+    
+#     for df_train, df_test in dataset:
+#         print(len(df_train), len(df_test))

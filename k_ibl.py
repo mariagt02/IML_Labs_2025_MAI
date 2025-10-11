@@ -1,20 +1,47 @@
 import pandas as pd
 import numpy as np
 from typing import Literal
-import math
 from collections import Counter
-import json
-import itertools
-from sklearn.neighbors import KNeighborsClassifier
 from metrics import Metrics
-from tqdm import tqdm
+from enum import Enum
+
+class IBLHyperParameters:
+    class SimMetrics(str, Enum):
+        EUCLIDEAN = "euc"
+        COSINE = "cos"
+        IVDM = "ivdm"
+        HEOM = "heom"
+        GWHSM = "gwhsm"
+    
+    class Voting(str, Enum):
+        # The voting scheme
+        MODIFIED_PLURALITY = "mp"
+        BORDA_COUNT = "bc"
+    
+    class Retention(str, Enum):
+        # The retention policy
+        NEVER_RETAIN = "nr"
+        ALWAYS_RETAIN = "ar"
+        DIFFERENT_CLASS = "dc"
+        DEGREE_OF_DISAGREEMENT = "dd"
+    
+    @classmethod
+    def get_all_values(cls, exclude = [SimMetrics.IVDM, SimMetrics.HEOM, SimMetrics.GWHSM]) -> list[list[str]]:
+        # We exclude the distance metrics that are not implemented
+        results = []
+        for _, obj in cls.__dict__.items():
+            if isinstance(obj, type) and issubclass(obj, Enum):
+                results.append([member.value for member in obj if member not in exclude])
+        
+        return results
+    
 
 class KIBLearner:
     def __init__(self,
-        sim_metric: Literal["euc", "cos", "heom", "ivdm", "gwhsm"],
+        sim_metric: IBLHyperParameters.SimMetrics,
         k: int,
-        voting: Literal["mp", "bc"], # modified plurality, borda count
-        retention: Literal["nr", "ar", "dc", "dd"], # Never Retain, Always Retain, Different Class, Degree of Disagreement
+        voting: IBLHyperParameters.Voting,
+        retention: IBLHyperParameters.Retention,
         threshold: float = 0.5
     ):
         
@@ -53,19 +80,19 @@ class KIBLearner:
             else:
                 raise ValueError(f"Unkown column type: {type(col_element)}")
             
-        if "ivdm" in self.sim_metric:
+        if self.sim_metric == IBLHyperParameters.SimMetrics.IVDM:
             self.ivdm_metric = Metrics.IVDM(self.CD, self.discrete_cols, self.continuous_cols)
     
     def compute_distance(self, instance: np.ndarray) -> np.ndarray:
-        if self.sim_metric == "euc":
+        if self.sim_metric == IBLHyperParameters.SimMetrics.EUCLIDEAN:
             return Metrics.Base.euclidean_dist(self.CD, instance)
-        elif self.sim_metric == "cos":
+        elif self.sim_metric == IBLHyperParameters.SimMetrics.COSINE:
             return Metrics.Base.cosine_dist(self.CD, instance)
-        elif self.sim_metric == "heom":
+        elif self.sim_metric == IBLHyperParameters.SimMetrics.HEOM:
             return self.__heom() # TODO: complete
-        elif self.sim_metric == "ivdm":
+        elif self.sim_metric == IBLHyperParameters.SimMetrics.IVDM:
             return self.ivdm_metric.compute(instance)
-        elif self.sim_metric == "gwhsm":
+        elif self.sim_metric == IBLHyperParameters.SimMetrics.GWHSM:
             return self.__gwhsm() # TODO: complete
     
     
@@ -120,25 +147,25 @@ class KIBLearner:
         
     
     def voting_schema(self, nearest_outputs):
-        if self.voting == 'mp': # modified plurality
+        if self.voting == IBLHyperParameters.Voting.MODIFIED_PLURALITY:
             return self.modified_plurality(nearest_outputs)
-        elif self.voting == 'bc': # borda count
+        elif self.voting == IBLHyperParameters.Voting.BORDA_COUNT:
             return self.borda_count(nearest_outputs)
     
     
     def update_cd(self, instance, output, nearest_outputs):
-        if self.retention == "nr":
+        if self.retention == IBLHyperParameters.Retention.NEVER_RETAIN:
             return
         
-        elif self.retention == "ar":
+        elif self.retention == IBLHyperParameters.Retention.ALWAYS_RETAIN:
             
             self.CD = np.append(self.CD, instance.reshape(1, -1), axis=0)
         
-        elif self.retention == "dc":
+        elif self.retention == IBLHyperParameters.Retention.DIFFERENT_CLASS:
             if output != instance[-1]:
                 self.CD = np.append(self.CD, instance.reshape(1, -1), axis=0)
         
-        elif self.retention == "dd":
+        elif self.retention == IBLHyperParameters.Retention.DEGREE_OF_DISAGREEMENT:
             dict_app = dict(list(sorted(Counter(nearest_outputs).items(), key=lambda x: x[1], reverse=True)))
             tied = [list(dict_app.keys())[0]]
             max_ = dict_app[list(dict_app.keys())[0]]
@@ -160,7 +187,7 @@ class KIBLearner:
             num_majority_class = dict_app[majority_class]
             num_remaining_cases = len(nearest_outputs)-num_majority_class
             num_classes = len(dict_app)
-            d = num_remaining_cases / ((num_classes-1) * num_majority_class)
+            d = num_remaining_cases / ((num_classes-1) * num_majority_class) # FIXME: division by zero sometimes
             if d>= self.threshold:
                 self.CD = np.append(self.CD, instance.reshape(1, -1), axis=0)
         
@@ -182,7 +209,7 @@ class KIBLearner:
         self.__train(train_df)
         
         predictions = []
-        for _, instance in tqdm(test_df.iterrows(), total=len(test_df)):
+        for _, instance in test_df.iterrows():
             instance = instance.to_numpy()
             # Compute similarity metric -> important no passar ultima columna (o la de la classe).
             # Obtain k-nearest neighbors
@@ -201,66 +228,3 @@ class KIBLearner:
         # Perhaps not used
         pass
 
-
-
-if __name__ == "__main__":
-        
-    folds = 10  
-    
-
-    # Use of pre-implemented knn to double-check our results
-    
-    # df_train = pd.read_csv(f"preprocessed/pen-based/pen-based.fold.000000.train.csv")
-    # df_test = pd.read_csv(f"preprocessed/pen-based/pen-based.fold.000000.test.csv")
-    # knn = KNeighborsClassifier(n_neighbors=7, metric="cosine")
-    # knn.fit(df_train[df_train.columns[:-1]], df_train[df_train.columns[-1]])
-    # y_pred = knn.predict(df_test[df_test.columns[:-1]])
-    # y_true = df_test[df_test.columns[-1]]
-    # accuracy = np.sum(y_pred == y_true) / len(y_true)
-    # print(f"KNN accuracy: {round(accuracy * 100, 4)}%")
-    
-    # exit()
-    
-    a = [['ivdm'],["bc"],[3], ['nr']] #FIXME: add missing cases (now they are not completely implemented)
-    # a = [['euc','cos'],["mp"],[3,5,7], ['nr', 'ar', 'dc']] #FIXME: add missing cases (now they are not completely implemented)
-    parameters_combinations = list(itertools.product(*a))
-
-    for dataset in ["credit-a", "pen-based"]:
-        results = {}
-        for metric, voting, k, retention in parameters_combinations:
-            test_name = f"{metric}_{voting}_{k}_{retention}"
-            ibl_learner = KIBLearner(
-                sim_metric=metric,
-                k=k,
-                voting=voting,
-                retention=retention
-            )
-            total_accuracy = 0
-            results[test_name] = {}
-            for i in range(folds):
-                df_train = pd.read_csv(f"preprocessed/{dataset}/{dataset}.fold.{str(i).zfill(6)}.train.csv")
-                df_test = pd.read_csv(f"preprocessed/{dataset}/{dataset}.fold.{str(i).zfill(6)}.test.csv")
-                y_pred = ibl_learner.kIBLAlgorithm(df_train, df_test)
-                y_true = df_test[df_test.columns[-1]]
-
-                results[test_name][i] = {}
-
-                results[test_name][i]["y_true"] = y_true.to_list()
-                results[test_name][i]["y_pred"] = y_pred
-                
-                correct = 0
-                for pred, true in zip(y_pred, y_true):
-                    if pred == true: correct += 1
-                    # print(f"Prediction: {pred}. True value: {true}")
-                curr_accuracy = (correct / len(y_pred))
-                results[test_name][i]["fold_accuracy"] = curr_accuracy
-                total_accuracy += correct
-                print(f"Accuracy fold {i}: {round(curr_accuracy * 100, 4)}%")
-            
-            total_accuracy /= (len(y_pred)*folds)
-            results[test_name]["total_accuracy"] = total_accuracy
-            print(f"Total accuracy: {round(total_accuracy * 100, 4)}%")
-        
-        
-        with open(f"results_{dataset}.json", "w+") as f:
-            json.dump(results, f)
