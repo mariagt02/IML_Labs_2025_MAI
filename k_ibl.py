@@ -4,6 +4,11 @@ from typing import Literal
 from collections import Counter
 from metrics import Metrics
 from enum import Enum
+from sklearn.neighbors import KNeighborsClassifier
+from metrics import Metrics
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.decomposition import PCA
+from enum import Enum
 
 class IBLHyperParameters:
     class SimMetrics(str, Enum):
@@ -187,10 +192,106 @@ class KIBLearner:
             num_majority_class = dict_app[majority_class]
             num_remaining_cases = len(nearest_outputs)-num_majority_class
             num_classes = len(dict_app)
-            d = num_remaining_cases / ((num_classes-1) * num_majority_class) # FIXME: division by zero sometimes
+            if (num_classes-1)==0:
+                d = 0
+            else:
+                d = num_remaining_cases / ((num_classes-1) * num_majority_class)
             if d>= self.threshold:
                 self.CD = np.append(self.CD, instance.reshape(1, -1), axis=0)
-        
+
+    def wilson_editing_v1(self, X, y):
+        knn = KNeighborsClassifier(n_neighbors=self.k, metric='euclidean').fit(X, y)  # self.k
+        y_pred = knn.predict(X)
+        mask = np.where(y_pred != y)
+        X_r = np.delete(X, mask, axis=0)
+        y_r = np.delete(y, mask, axis=0)
+        return X_r, y_r
+
+    def wilson_editing_v2(self, X, y):
+        y_pred = []
+        for _, instance in X.iterrows():
+            instance = instance.to_numpy()
+            nearest_outputs = self.return_nn(Metrics.Base.euclidean_dist(X, instance))
+            output = self.modified_plurality(nearest_outputs)
+            y_pred.append(output)
+        mask = np.where(y_pred != y)
+        X_r = np.delete(X, mask, axis=0)
+        y_r = np.delete(y, mask, axis=0)
+        return X_r, y_r
+
+    def reachable(self, X, y):
+        recheable_list = []
+        for i, x in enumerate(X):
+            instance_repeated = np.tile(x, (X.shape[0], 1))
+            euclidean_dist = np.linalg.norm(instance_repeated[:, :-1] - X[:, :-1], axis=1)
+            sorted_idx = np.argsort(euclidean_dist)
+            y_idx_sorted = y[sorted_idx]
+            target_y = y[i]
+            recheable_ = []
+            for i, y_i in enumerate(y_idx_sorted):
+                if y_i == target_y:
+                    recheable_.append(sorted_idx[i])
+                else:
+                    break
+            recheable_list.append(recheable_)
+
+        return np.array(recheable_list)
+
+    def coverage(self, reachable):
+        coverage_array = [[] for i in range(len(reachable))]
+        for i, reachable_ in enumerate(reachable):
+            for reach in reachable_:
+                if i not in coverage_array[reach]:
+                    coverage_array[reach].append(i)
+        return np.array(coverage_array)
+
+    def ICF(self, X, y):
+        X, y = self.wilson_editing_v2(X, y)
+        reachable = self.reachable(X, y)
+        coverage = self.coverage(reachable)
+        progress = False
+        while not progress:
+            X_r = X.copy()
+            y_r = y.copy()
+            reachable_r = reachable.copy()
+            coverage_r = coverage.copy()
+            for i, x in enumerate(X):
+                reachable = 0
+                coverage = 0
+                if len(reachable[i]) > len(coverage[i]):
+                    X_r = np.delete(X_r, x, axis=0)
+                    y_r = np.delete(y_r, x, axis=0)
+                    reachable_r = np.delete(reachable_r, x, axis=0)
+                    coverage_r = np.delete(coverage_r, x, axis=0)
+                else:
+                    progress = True
+            X = X_r.copy()
+            y = y_r.copy()
+            reachable = reachable_r.copy()
+            coverage = coverage_r.copy()
+        return X_r, y_r
+
+    def pca_analysis(self, X, y, n_components):
+        pca = PCA(n_components=n_components)
+        X_r = pca.fit_transform(X)
+        principal_Df = pd.DataFrame(data=X_r
+                                    , columns=['principal component 1', 'principal component 2'])
+        if n_components == 2:
+            plt.figure()
+            plt.figure(figsize=(15, 15))
+            plt.xticks(fontsize=12)
+            plt.yticks(fontsize=14)
+            plt.xlabel('Principal Component - 1', fontsize=20)
+            plt.ylabel('Principal Component - 2', fontsize=20)
+            plt.title("Principal Component Analysis", fontsize=20)
+            targets = set(y)
+            for target in targets:
+                indicesToKeep = y == target
+                plt.scatter(principal_Df.loc[indicesToKeep, 'principal component 1']
+                            , principal_Df.loc[indicesToKeep, 'principal component 2'], s=50)
+
+            plt.legend(targets, prop={'size': 15}, loc='upper right')
+        return X_r
         
     """ def ir_KIBLAlgorithm(...) # kibl amb les diferents instance reduction techniques
         # una reducció
