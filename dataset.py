@@ -218,15 +218,19 @@ class DatasetVisualizer:
         self.AllowedDims = Literal[tuple(self.__allowed_dims)]
     
     
-    def visualize_df(self, num_dims: "DatasetVisualizer.AllowedDims"):
+    def visualize_df(self, num_dims: "DatasetVisualizer.AllowedDims", df: np.ndarray = None):
         if num_dims not in self.__allowed_dims:
             raise ValueError(f"Received {num_dims}. Only allowed {self.__allowed_dims}")
         
-        train_df, test_df = self.df_loader.get_fold(1)    
-        df = pd.concat([train_df, test_df], axis=0)
+        if df is None:
+            train_df, test_df = self.df_loader.get_fold(1)    
+            df = pd.concat([train_df, test_df], axis=0)
+            X = df[df.columns[:-1]]
+            y = df[df.columns[-1]]
+        else:
+            X = df[:,:-1]
+            y = df[:,-1]
         
-        X = df[df.columns[:-1]]
-        y = df[df.columns[-1]]
         classes = np.unique(y)
         
         custom_colors = [
@@ -248,16 +252,16 @@ class DatasetVisualizer:
     
         
         if num_dims == 2:
-            reducer = TSNE(n_components=2)
+            reducer = PCA(n_components=2, random_state=42)
         else:
-            reducer = TSNE(n_components=3)
+            reducer = PCA(n_components=3, random_state=42)
         
         X_reduced = reducer.fit_transform(X)
         
         plt.figure(figsize=(10, 5))
-        plt.rcParams.update({
-            "text.usetex": True,
-        })
+        # plt.rcParams.update({
+        #     "text.usetex": True,
+        # })
         
         if num_dims == 2:
             for i, cls in enumerate(classes):
@@ -298,7 +302,29 @@ class DatasetVisualizer:
         plt.tight_layout()
         plt.show()
         
-        return X_reduced, y
+        return X_reduced, y, reducer
+    
+    # def pca_analysis(self, X, y, n_components):
+    #     pca = PCA(n_components=n_components)
+    #     X_r = pca.fit_transform(X)
+    #     principal_Df = pd.DataFrame(data=X_r
+    #                                 , columns=['principal component 1', 'principal component 2'])
+    #     if n_components == 2:
+    #         plt.figure()
+    #         plt.figure(figsize=(15, 15))
+    #         plt.xticks(fontsize=12)
+    #         plt.yticks(fontsize=14)
+    #         plt.xlabel('Principal Component - 1', fontsize=20)
+    #         plt.ylabel('Principal Component - 2', fontsize=20)
+    #         plt.title("Principal Component Analysis", fontsize=20)
+    #         targets = set(y)
+    #         for target in targets:
+    #             indicesToKeep = y == target
+    #             plt.scatter(principal_Df.loc[indicesToKeep, 'principal component 1']
+    #                         , principal_Df.loc[indicesToKeep, 'principal component 2'], s=50)
+
+    #         plt.legend(targets, prop={'size': 15}, loc='upper right')
+    #     return X_r
         
         
         

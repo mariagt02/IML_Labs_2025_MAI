@@ -4,11 +4,14 @@ from typing import Literal
 from collections import Counter
 from metrics import Metrics
 from enum import Enum
-from sklearn.neighbors import KNeighborsClassifier
-from metrics import Metrics
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.decomposition import PCA
+from metrics import _base_metrics
 from enum import Enum
+from red_techniques import Reductor
+
+class ReductionTechnique(Enum):
+    ALL_KNN = "AllKNN"
+    MCNN = "MCNN"
+    ICF = "ICF"
 
 class IBLHyperParameters:
     class SimMetrics(str, Enum):
@@ -61,157 +64,9 @@ class KIBLearner:
         self.discrete_cols = []
         self.continuous_cols = []
 
-    # def train_condensation -> MCNN
-    def _get_class_data(self, data: np.ndarray):
-        class_data = {}
-        if data.size == 0:
-            return {}, []
-        
-        labels = np.unique(data[:, -1])
-        for label in labels:
-            class_data[label] = data[data[:, -1] == label]
-        return class_data, labels 
-    
-    def _get_centroid(self, data: np.ndarray):
-        if data.size == 0:
-            return None
-        return np.mean(data[:, :-1], axis=0)
-    
-    def _nearest_neighbor_label(self, sample: np.ndarray, prototypes: np.ndarray):
-        if prototypes.size == 0 or prototypes.ndim != 2:
-            return None 
-        sample_features = sample[:-1]
-        prototype_features = prototypes[:, :-1]
-        distances = np.sum(np.square(prototype_features - sample_features), axis=1)
-        nearest_index = np.argmin(distances)
-        return prototypes[nearest_index, -1]
-
-    def _find_closest_sample_to_centroid(self, data: np.ndarray, centroid: np.ndarray):
-        if centroid is None or data.size == 0:
-            return None
-        features = data[:, :-1]
-        distances = np.linalg.norm(features - centroid, axis=1)
-        closest_index = np.argmin(distances)
-        return data[closest_index]
-    
-    def _train_condensation(self, data: np.ndarray) -> np.ndarray:
-    # NOTA: Utilitzo mateixa notació que en el pseudocodi del paper
-        T = data     
-        Q = np.empty((0, T.shape[1]))
-        S_current = T
-        while True:
-            t = 0
-            S_new = S_current
-            P_current = np.empty((0, T.shape[1]))
-            # Repeats until S_new (the misclassified set S'') is empty (Step 11).
-            while True:
-                t += 1 
-                class_data_s_new, labels = self._get_class_data(S_new) 
-                new_prototypes = []
-                for label in labels:
-                    data_j = class_data_s_new[label]
-                    
-                    if data_j.size > 0:
-                        centroid_j = self._get_centroid(data_j) 
-                        prototype_j = self._find_closest_sample_to_centroid(data_j, centroid_j)
-                        
-                        if prototype_j is not None:
-                            new_prototypes.append(prototype_j)
-                            
-                P = np.array(new_prototypes) 
-                
-                if P.size == 0:
-                    break 
-                P_current = np.vstack([P_current, P]) 
-                
-                S_correctly_classified = np.empty((0, T.shape[1])) # S' (Step 8)
-                S_misclassified = np.empty((0, T.shape[1]))      # S'' (Step 8)
-                for sample in S_new:
-                    if Q.size == 0 and P_current.size == 0:
-                        break   
-                    nn_label = self._nearest_neighbor_label(sample, P_current) 
-                    if nn_label != sample[-1]:
-                        S_misclassified = np.vstack([S_misclassified, sample])
-                    else:
-                        S_correctly_classified = np.vstack([S_correctly_classified, sample])
-                        
-                S_new = S_misclassified 
-                if S_misclassified.size == 0:
-                    break # all samples in the current S_new are correctly classified
-            Q = np.vstack([Q, P_current])
-            
-            S_misclassified_final = np.empty((0, T.shape[1]))
-            
-            # check consistency of the ENTIRE training set T using Q
-            for sample in T:
-                nn_label = self._nearest_neighbor_label(sample, Q)
-                if nn_label != sample[-1]:
-                    S_misclassified_final = np.vstack([S_misclassified_final, sample])
-            S_current = S_misclassified_final
-            
-            if S_misclassified_final.size == 0:
-                return Q
-
-    # def train_edition
-    
-    # def train_hybrid
-
-    def all_knn(self, data: np.ndarray, k: int, metric: Literal["euc", "cos", "ivdm"]="euc"):
-        
-        # print(f'\nOriginal data shape: {data.shape}')
-
-        keep_instance_flags = np.ones(data.shape[0], dtype=bool)
-
-        if metric == "euc":
-            metric_func = Metrics.Base.euclidean_dist
-        elif metric == "cos":
-            metric_func = Metrics.Base.cosine_sim
-        elif metric == "ivdm":
-            metric_func = Metrics.Base.ivdm
-        else:
-            raise ValueError(f"Unknown metric: {metric}")
-
-        for i in range(data.shape[0]): # for each instance in data
-
-
-            instance = data[i, :]
-            label = data[i, -1]
-
-            sorted_neighbours = metric_func(data, instance)[1:] # data[:, :-1]
-            # [1:] to skip the instance itself from the closest neighbors (nearest neighbor is itself, dist = 0)
-
-            for j in range(k): # for each neighbour of the instance
-                
-                # print('\nITERATION', j)
-
-                i_nearest = sorted_neighbours[:j+1] # keep as many neighbours as the iteration j indicates
-
-                vals, counts = np.unique(i_nearest[:, -1], return_counts=True)
-
-                most_voted_label = vals[np.argmax(counts)]
-                majority_votes = np.max(counts)
-                
-                total_votes = np.sum(counts)
-                majority_fraction = majority_votes / total_votes
-
-                if majority_fraction > 0.5: # només si és la majoria estricta (<50% of votes) --> per no tenir empats
-                    has_strict_majority = True
-                else:
-                    has_strict_majority = False
-                
-
-                # if at some point the closest neighbours disagree (majoria != instance label), take the instance out
-                if has_strict_majority and most_voted_label != label:
-                    keep_instance_flags[i] = 0  # remove
-                    break
-
-        
-        reduced_data = data[keep_instance_flags]
-        # print(f'Reduced data shape: {reduced_data.shape}')
-        return reduced_data
 
     
-    def __train(self, df: pd.DataFrame, red_technique: Literal["None", "MCNN", "AllKNN", "ICF"]="None"):
+    def __train(self, df: pd.DataFrame, red_technique: ReductionTechnique = None):
         data = df.to_numpy()
 
         self.CD = None
@@ -219,12 +74,14 @@ class KIBLearner:
         self.continuous_cols = []
         # added this because otherwise the CD keeps shrinking at each fold
 
-        if red_technique == 'None':
+        if not red_technique:
             self.CD = data
-        elif red_technique == 'MCNN': # cridarem les diferents funcions de train segons la reduction technique
-            self.CD = self._train_condensation(data)
-        elif red_technique == 'AllKNN':
-            self.CD = self.all_knn(data=data, k=self.k)
+        elif red_technique == ReductionTechnique.MCNN: # cridarem les diferents funcions de train segons la reduction technique
+            self.CD = Reductor.MCNN.reduce(data)
+        elif red_technique == ReductionTechnique.ALL_KNN:
+            self.CD = Reductor.ALLKNN.reduce(data=data, k=self.k)
+        elif red_technique == ReductionTechnique.ICF:
+            self.CD = Reductor.ICF.reduce(data=data, k = self.k)
         
         # When loading the train dataset, we can determine whether each column is discrete or continuous
         for i, col in enumerate(df.columns[:-1]):
@@ -350,115 +207,20 @@ class KIBLearner:
             if d>= self.threshold:
                 self.CD = np.append(self.CD, instance.reshape(1, -1), axis=0)
 
-    def wilson_editing_v1(self, X, y):
-        knn = KNeighborsClassifier(n_neighbors=self.k, metric='euclidean').fit(X, y)  # self.k
-        y_pred = knn.predict(X)
-        mask = np.where(y_pred != y)
-        X_r = np.delete(X, mask, axis=0)
-        y_r = np.delete(y, mask, axis=0)
-        return X_r, y_r
 
-    def wilson_editing_v2(self, X, y):
-        y_pred = []
-        for _, instance in X.iterrows():
-            instance = instance.to_numpy()
-            nearest_outputs = self.return_nn(Metrics.Base.euclidean_dist(X, instance))
-            output = self.modified_plurality(nearest_outputs)
-            y_pred.append(output)
-        mask = np.where(y_pred != y)
-        X_r = np.delete(X, mask, axis=0)
-        y_r = np.delete(y, mask, axis=0)
-        return X_r, y_r
-
-    def reachable(self, X, y):
-        recheable_list = []
-        for i, x in enumerate(X):
-            instance_repeated = np.tile(x, (X.shape[0], 1))
-            euclidean_dist = np.linalg.norm(instance_repeated[:, :-1] - X[:, :-1], axis=1)
-            sorted_idx = np.argsort(euclidean_dist)
-            y_idx_sorted = y[sorted_idx]
-            target_y = y[i]
-            recheable_ = []
-            for i, y_i in enumerate(y_idx_sorted):
-                if y_i == target_y:
-                    recheable_.append(sorted_idx[i])
-                else:
-                    break
-            recheable_list.append(recheable_)
-
-        return np.array(recheable_list)
-
-    def coverage(self, reachable):
-        coverage_array = [[] for i in range(len(reachable))]
-        for i, reachable_ in enumerate(reachable):
-            for reach in reachable_:
-                if i not in coverage_array[reach]:
-                    coverage_array[reach].append(i)
-        return np.array(coverage_array)
-
-    def ICF(self, X, y):
-        X, y = self.wilson_editing_v2(X, y)
-        reachable = self.reachable(X, y)
-        coverage = self.coverage(reachable)
-        progress = False
-        while not progress:
-            X_r = X.copy()
-            y_r = y.copy()
-            reachable_r = reachable.copy()
-            coverage_r = coverage.copy()
-            for i, x in enumerate(X):
-                reachable = 0
-                coverage = 0
-                if len(reachable[i]) > len(coverage[i]):
-                    X_r = np.delete(X_r, x, axis=0)
-                    y_r = np.delete(y_r, x, axis=0)
-                    reachable_r = np.delete(reachable_r, x, axis=0)
-                    coverage_r = np.delete(coverage_r, x, axis=0)
-                else:
-                    progress = True
-            X = X_r.copy()
-            y = y_r.copy()
-            reachable = reachable_r.copy()
-            coverage = coverage_r.copy()
-        return X_r, y_r
-
-    def pca_analysis(self, X, y, n_components):
-        pca = PCA(n_components=n_components)
-        X_r = pca.fit_transform(X)
-        principal_Df = pd.DataFrame(data=X_r
-                                    , columns=['principal component 1', 'principal component 2'])
-        if n_components == 2:
-            plt.figure()
-            plt.figure(figsize=(15, 15))
-            plt.xticks(fontsize=12)
-            plt.yticks(fontsize=14)
-            plt.xlabel('Principal Component - 1', fontsize=20)
-            plt.ylabel('Principal Component - 2', fontsize=20)
-            plt.title("Principal Component Analysis", fontsize=20)
-            targets = set(y)
-            for target in targets:
-                indicesToKeep = y == target
-                plt.scatter(principal_Df.loc[indicesToKeep, 'principal component 1']
-                            , principal_Df.loc[indicesToKeep, 'principal component 2'], s=50)
-
-            plt.legend(targets, prop={'size': 15}, loc='upper right')
-        return X_r
+ 
         
-    """ def ir_KIBLAlgorithm(...) # kibl amb les diferents instance reduction techniques
+    # def ir_KIBLAlgorithm(...) # kibl amb les diferents instance reduction techniques
         # una reducció
-        self.__train(train_df)
-        self.__kIBLAlgorithm()
-    
-    def KIBLAlgorithm(...) # "substitueix" a la kiblalgorithm que teniem abans
-        # cap reducció
-        self.__train(train_df)
-        self.__kIBLAlgorithm() """
+        # self.__train(train_df)
+        # self.__kIBLAlgorithm()
     
     
     
-    # def __kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> list[int]:
-    def kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> list[int]:
-        self.__train(train_df) # !!!! red_technique='AllKNN'
+    
+    def kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame, reduction: ReductionTechnique = None) -> list[int]:
+    # def kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> list[int]:
+        self.__train(df=train_df, red_technique=reduction)
         
         predictions = []
         for _, instance in test_df.iterrows():

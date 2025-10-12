@@ -1,4 +1,4 @@
-from k_ibl import KIBLearner, IBLHyperParameters
+from k_ibl import KIBLearner, IBLHyperParameters, ReductionTechnique
 import json
 import itertools
 from sklearn.neighbors import KNeighborsClassifier
@@ -37,10 +37,12 @@ if __name__ == "__main__":
     hyperparameters_combinations = list(itertools.product(*hyperparameters))
     
     dataset_names = [
-        "credit-a",
+        # "credit-a",
         "pen-based"
     ]
     num_tests = len(hyperparameters_combinations) * len(dataset_names)
+    
+    hyperparameters_combinations = [("euc", "mp", "nr", 3), ("euc", "mp", "nr", 3)]
     
     test_num = 0
     for dataset in dataset_names:
@@ -63,7 +65,7 @@ if __name__ == "__main__":
             experiment_start_time = time.time()
             for i, (df_train, df_test) in enumerate(dataset_loader):
                 fold_start_time = time.time()
-                y_pred = ibl_learner.kIBLAlgorithm(df_train, df_test)
+                y_pred = ibl_learner.kIBLAlgorithm(df_train, df_test, reduction=ReductionTechnique.MCNN if test_num == 0 else None)
                 fold_total_time = time.time() - fold_start_time
                 y_true = df_test[df_test.columns[-1]]
 
@@ -87,6 +89,6 @@ if __name__ == "__main__":
             test_num += 1
         
         
-        with open(f"results_{dataset}.json", "w+") as f:
-            json.dump(results, f)
+        # with open(f"results_{dataset}.json", "w+") as f:
+        #     json.dump(results, f)
     
