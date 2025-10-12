@@ -67,13 +67,75 @@ class KIBLearner:
     
     # def train_hybrid
 
+    def all_knn(self, data: np.ndarray, k: int, metric: Literal["euc", "cos", "ivdm"]="euc"):
+        
+        # print(f'\nOriginal data shape: {data.shape}')
+
+        keep_instance_flags = np.ones(data.shape[0], dtype=bool)
+
+        if metric == "euc":
+            metric_func = Metrics.Base.euclidean_dist
+        elif metric == "cos":
+            metric_func = Metrics.Base.cosine_sim
+        elif metric == "ivdm":
+            metric_func = Metrics.Base.ivdm
+        else:
+            raise ValueError(f"Unknown metric: {metric}")
+
+        for i in range(data.shape[0]): # for each instance in data
+
+
+            instance = data[i, :]
+            label = data[i, -1]
+
+            sorted_neighbours = metric_func(data, instance)[1:] # data[:, :-1]
+            # [1:] to skip the instance itself from the closest neighbors (nearest neighbor is itself, dist = 0)
+
+            for j in range(k): # for each neighbour of the instance
+                
+                # print('\nITERATION', j)
+
+                i_nearest = sorted_neighbours[:j+1] # keep as many neighbours as the iteration j indicates
+
+                vals, counts = np.unique(i_nearest[:, -1], return_counts=True)
+
+                most_voted_label = vals[np.argmax(counts)]
+                majority_votes = np.max(counts)
+                
+                total_votes = np.sum(counts)
+                majority_fraction = majority_votes / total_votes
+
+                if majority_fraction > 0.5: # només si és la majoria estricta (<50% of votes) --> per no tenir empats
+                    has_strict_majority = True
+                else:
+                    has_strict_majority = False
+                
+
+                # if at some point the closest neighbours disagree (majoria != instance label), take the instance out
+                if has_strict_majority and most_voted_label != label:
+                    keep_instance_flags[i] = 0  # remove
+                    break
+
+        
+        reduced_data = data[keep_instance_flags]
+        # print(f'Reduced data shape: {reduced_data.shape}')
+        return reduced_data
+
     
     def __train(self, df: pd.DataFrame, red_technique: Literal["None", "MCNN", "AllKNN", "ICF"]="None"):
         data = df.to_numpy()
+
+        self.CD = None
+        self.discrete_cols = []
+        self.continuous_cols = []
+        # added this because otherwise the CD keeps shrinking at each fold
+
         if red_technique == 'None':
             self.CD = data
         elif red_technique == 'MCNN': # cridarem les diferents funcions de train segons la reduction technique
             pass
+        elif red_technique == 'AllKNN':
+            self.CD = self.all_knn(data=data, k=self.k)
         
         # When loading the train dataset, we can determine whether each column is discrete or continuous
         for i, col in enumerate(df.columns[:-1]):
@@ -307,7 +369,7 @@ class KIBLearner:
     
     # def __kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> list[int]:
     def kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> list[int]:
-        self.__train(train_df)
+        self.__train(train_df) # !!!! red_technique='AllKNN'
         
         predictions = []
         for _, instance in test_df.iterrows():
