@@ -23,7 +23,7 @@ Combine training + testing dataset, preprocess and split once again.
     Categorical Variables
     
     Imputation -> KNN neighbors imputation (for categorical variables)
-               -> Median (for numerical variables)
+                -> Median (for numerical variables)
     
     34 rows with missing values in the trainig dataset
 """
