@@ -31,7 +31,7 @@ class IBLHyperParameters:
         DEGREE_OF_DISAGREEMENT = "dd"
     
     @classmethod
-    def get_all_values(cls, exclude = [SimMetrics.IVDM, SimMetrics.HEOM, SimMetrics.GWHSM]) -> list[list[str]]:
+    def get_all_values(cls, exclude = [SimMetrics.IVDM, SimMetrics.HEOM, SimMetrics.GWHSM, Retention.DEGREE_OF_DISAGREEMENT]) -> list[list[str]]:
         # We exclude the distance metrics that are not implemented
         results = []
         for _, obj in cls.__dict__.items():
@@ -290,10 +290,10 @@ class KIBLearner:
             if tied2bool == False:
                 return res
             else:
-                min_ = nearest_outputs.index(tied2[0])
+                min_ = list(nearest_outputs).index(tied2[0])
                 selected = tied2[0]
                 for i in range(1,len(tied2)):
-                    pos = nearest_outputs.index(tied2[i])
+                    pos = list(nearest_outputs).index(tied2[i])
                     if pos<min_:
                         min_ = pos
                         selected = tied2[i]
@@ -480,3 +480,6 @@ class KIBLearner:
         # Perhaps not used
         pass
 
+
+class HyperParameterExplorer:
+    pass

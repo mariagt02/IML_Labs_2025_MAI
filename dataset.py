@@ -3,6 +3,12 @@ import re
 import pandas as pd
 import string
 from utils import TerminalColor
+from typing import Literal
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+import numpy as np
 
 class DatasetLoader:
     def __init__(
@@ -167,7 +173,7 @@ class DatasetLoader:
             self._print(f"{TerminalColor().ERROR} No valid dataset folds found in {self.__dataset_path}")
             exit(-1)
         else:
-            self._print(f"{TerminalColor().SUCCESS}: loaded {self.num_folds} folds successfully.")
+            self._print(f"{TerminalColor().SUCCESS} loaded {self.num_folds} folds successfully.")
 
     def _print(self, msg) -> None:
         if self.verbose:
@@ -194,9 +200,116 @@ class DatasetLoader:
         
 
 
-# if __name__ == "__main__":
-#     dataset = DatasetLoader(dataset_name="pen-based", verbose=True)
-#     dataset.load()
+class DatasetVisualizer:
+    def __init__(self,
+        dataset_name: str,
+        filename_template="{dataset}.fold.{fold:06d}.{type}.{ext}",
+        dataset_dir: str = "preprocessed"
+    ):
+        self.df_loader = DatasetLoader(
+            dataset_name=dataset_name,
+            filename_template=filename_template,
+            dataset_dir=dataset_dir,
+            verbose=True
+        )
+        self.df_loader.load()
+        
+        self.__allowed_dims = [2, 3]
+        self.AllowedDims = Literal[tuple(self.__allowed_dims)]
     
-#     for df_train, df_test in dataset:
-#         print(len(df_train), len(df_test))
+    
+    def visualize_df(self, num_dims: "DatasetVisualizer.AllowedDims"):
+        if num_dims not in self.__allowed_dims:
+            raise ValueError(f"Received {num_dims}. Only allowed {self.__allowed_dims}")
+        
+        train_df, test_df = self.df_loader.get_fold(1)    
+        df = pd.concat([train_df, test_df], axis=0)
+        
+        X = df[df.columns[:-1]]
+        y = df[df.columns[-1]]
+        classes = np.unique(y)
+        
+        custom_colors = [
+            '#FF0000',  # Red
+            '#0000FF',  # Blue
+            '#00FF00',  # Green
+            '#FFFF00',  # Yellow
+            '#FF00FF',  # Magenta
+            '#00FFFF',  # Cyan
+            '#FF8000',  # Orange
+            '#8000FF',  # Purple
+            '#008000',  # Dark Green
+            '#FF0080',  # Pink
+        ]
+        
+    
+        n_classes = len(np.unique(y))
+        cmap = ListedColormap(custom_colors[:n_classes])
+    
+        
+        if num_dims == 2:
+            reducer = TSNE(n_components=2)
+        else:
+            reducer = TSNE(n_components=3)
+        
+        X_reduced = reducer.fit_transform(X)
+        
+        plt.figure(figsize=(10, 5))
+        plt.rcParams.update({
+            "text.usetex": True,
+        })
+        
+        if num_dims == 2:
+            for i, cls in enumerate(classes):
+                idx = np.where(y == cls)
+                plt.scatter(
+                    X_reduced[idx, 0],
+                    X_reduced[idx, 1],
+                    color=cmap(i),
+                    edgecolors="black",
+                    linewidth=0.2,
+                    label=str(cls)
+                )
+            plt.xlabel("Dimension 1")
+            plt.ylabel("Dimension 2")
+            plt.title(f"2D {self.df_loader.dataset_name} dataset visualization (t-SNE)", fontsize=14, fontweight="bold")
+            plt.legend(title='Class')
+            
+        else:
+            ax = plt.axes(projection="3d")
+            
+            for i, cls in enumerate(classes):
+                idx = np.where(y == cls)
+                ax.scatter3D(
+                    X_reduced[idx, 0].flatten(),
+                    X_reduced[idx, 1].flatten(),
+                    X_reduced[idx, 2].flatten(),
+                    color=cmap(i),
+                    label=str(cls),
+                    edgecolor="black",
+                    linewidth=0.2
+                )
+            ax.set_xlabel("Component 1")
+            ax.set_ylabel("Component 2")
+            ax.set_zlabel("Component 3")
+            plt.title(f"3D {self.df_loader.dataset_name} dataset visualization (t-SNE)", fontsize=14, fontweight="bold")
+            plt.legend(title='Class')
+        
+        plt.tight_layout()
+        plt.show()
+        
+        return X_reduced, y
+        
+        
+        
+        
+
+
+
+if __name__ == "__main__":
+                
+    df_visualizer = DatasetVisualizer(
+        dataset_name="credit-a"
+    )
+    
+    df_visualizer.visualize_df(num_dims=2)

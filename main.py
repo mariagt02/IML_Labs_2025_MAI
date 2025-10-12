@@ -4,6 +4,7 @@ import itertools
 from sklearn.neighbors import KNeighborsClassifier
 from dataset import DatasetLoader
 from utils import TerminalColor
+import time
 
 
 def calculate_accuracy(y_pred: list[int], y_true: list[int], percentage: bool = True) -> tuple[int, float]:
@@ -14,13 +15,10 @@ def calculate_accuracy(y_pred: list[int], y_true: list[int], percentage: bool = 
     ratio = correct / len(y_true)
     
     return correct, round(ratio * 100, 4) if percentage else ratio
-    
+
 
 if __name__ == "__main__":
-        
-    folds = 10  
     
-
     # Use of pre-implemented knn to double-check our results
     
     # df_train = pd.read_csv(f"preprocessed/pen-based/pen-based.fold.000000.train.csv")
@@ -37,15 +35,22 @@ if __name__ == "__main__":
     
     hyperparameters = IBLHyperParameters.get_all_values() + [k_values]    
     hyperparameters_combinations = list(itertools.product(*hyperparameters))
-
-    for dataset in ["credit-a", "pen-based"]:
+    
+    dataset_names = [
+        "credit-a",
+        "pen-based"
+    ]
+    num_tests = len(hyperparameters_combinations) * len(dataset_names)
+    
+    test_num = 0
+    for dataset in dataset_names:
         dataset_loader = DatasetLoader(dataset_name=dataset)
         dataset_loader.load()
         
         results = {}
         for metric, voting, retention, k in hyperparameters_combinations:
             test_name = f"{metric}_{voting}_{k}_{retention}"
-            print(f"Running test: {TerminalColor.colorize(test_name, color='orange', bold=True)}")
+            print(f"Test [{test_num} / {num_tests}]. Dataset: {TerminalColor.colorize(dataset_loader.dataset_name, color='yellow')}. Hyperparameters: {TerminalColor.colorize(test_name, color='orange', bold=True)}")
             ibl_learner = KIBLearner(
                 sim_metric=metric,
                 k=k,
@@ -54,9 +59,12 @@ if __name__ == "__main__":
             )
             total_accuracy = 0
             results[test_name] = {}
+
+            experiment_start_time = time.time()
             for i, (df_train, df_test) in enumerate(dataset_loader):
-                
+                fold_start_time = time.time()
                 y_pred = ibl_learner.kIBLAlgorithm(df_train, df_test)
+                fold_total_time = time.time() - fold_start_time
                 y_true = df_test[df_test.columns[-1]]
 
                 results[test_name][i] = {}
@@ -67,15 +75,18 @@ if __name__ == "__main__":
                 fold_correct, fold_accuracy = calculate_accuracy(y_pred, y_true.to_list())
                 
                 results[test_name][i]["fold_accuracy"] = fold_accuracy
+                results[test_name][i]["fold_time"] = fold_total_time
                 total_accuracy += fold_correct
-                print(f"\tAccuracy fold {i}: {fold_accuracy}%")
+
+            total_accuracy /= (len(y_pred) * dataset_loader.num_folds)            
             
-            total_accuracy /= (len(y_pred) * dataset_loader.num_folds)
-            
-            results[test_name]["total_accuracy"] = total_accuracy
-            
-            print(f"\tTotal accuracy: {TerminalColor.colorize(fold_accuracy, color='blue', bold=True)}%")
+            print(f"\tTotal accuracy: {TerminalColor.colorize(fold_accuracy, color='green', bold=True)}%")
+            results[test_name]["total_accuracy"] = round(total_accuracy * 100, 4)
+            results[test_name]["time"] = time.time() - experiment_start_time
+        
+            test_num += 1
         
         
         with open(f"results_{dataset}.json", "w+") as f:
             json.dump(results, f)
+    
