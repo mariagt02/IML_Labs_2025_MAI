@@ -146,7 +146,7 @@ class IVDM:
             arr = np.zeros((self.s + 2, self.num_classes), dtype=float)
             for u in range(self.s + 2):
                 for class_num, c in enumerate(self.classes):
-                    arr[u, class_num] = self.P_avc.get(f"{a}_{u}_{c}", 0.0)
+                    arr[u, class_num] = self.P_avc[int(a), int(u), int(c)]
             self.P_avc_arr[a] = arr
 
         # Precompute per-point P_ac arrays for continuous attributes
@@ -167,7 +167,7 @@ class IVDM:
                 Pvc = np.zeros(self.num_classes, dtype=float)
                 
                 for class_num, c in enumerate(self.classes):
-                    Pvc[class_num] = self.P_avc.get(f"{a}_{v}_{c}", 0.0)
+                    Pvc[class_num] = self.P_avc[int(a), int(v), int(c)]
                 val_map[v] = Pvc
             
             self.discrete_value_Pvc[a] = val_map
@@ -268,8 +268,22 @@ class IVDM:
         p_avc = defaultdict(float)
         for d in results:
             p_avc.update(d)
+        
+        max_v = max([float(elem.split("_")[1]) for elem in list(p_avc.keys())])
+        
+        matrix = np.zeros(shape=(int(self.data.shape[1]), int(max_v) + 2, len(np.unique(self.data[:, -1]))))
+        
+        
+        for k, value in p_avc.items():
+            elems = k.split("_")
+            a = int(float(elems[0]))
+            v = int(float(elems[1]))
+            c = int(float(elems[2]))
+            matrix[a, v, c] = value
+        return matrix
+        
 
-        return p_avc
+        
             
     
 

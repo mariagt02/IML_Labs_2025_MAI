@@ -88,6 +88,6 @@ if __name__ == "__main__":
             test_num += 1
         
         
-        # with open(f"results_{dataset}.json", "w+") as f:
-        #     json.dump(results, f)
+        with open(f"results_{dataset}.json", "w+") as f:
+            json.dump(results, f)
     
