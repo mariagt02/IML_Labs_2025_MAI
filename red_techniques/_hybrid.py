@@ -32,24 +32,24 @@ class ICF:
     @staticmethod
     def _reachable(X, y):
         recheable_list = []
-        for i, x in enumerate(X):
+        X = np.array(X)
+        y = np.array(y)
+        for j, x in enumerate(X):
             instance_repeated = np.tile(x, (X.shape[0], 1))
             euclidean_dist = np.linalg.norm(instance_repeated[:, :-1] - X[:, :-1], axis=1)
             sorted_idx = np.argsort(euclidean_dist)
             y_idx_sorted = y[sorted_idx]
-            target_y = y[i]
+            target_y = y[j]
             recheable_ = []
             for i, y_i in enumerate(y_idx_sorted):
                 if y_i == target_y:
-                    recheable_.append(sorted_idx[i])
+                        if sorted_idx[i]!=j:
+                            recheable_.append(sorted_idx[i])
                 else:
                     break
             recheable_list.append(recheable_)
-            
-        print([len(elem) for elem in recheable_list])
 
         return [np.array(elem) for elem in recheable_list]
-        # return recheable_list
 
     @staticmethod
     def _coverage(reachable):
@@ -65,29 +65,23 @@ class ICF:
         X=data[:,:-1]
         y=data[:,-1]
         X, y = ICF._wilson_editing(X, y, k)
-        reachable = ICF._reachable(X, y)
-        coverage = ICF._coverage(reachable)
-        progress = False
-        while not progress:
+        X = [np.array(elem) for elem in X]
+        y = [np.array(elem) for elem in y]
+        progress = True
+        while progress:
             X_r = X.copy()
             y_r = y.copy()
-            reachable_r = deepcopy(reachable)
-            coverage_r = deepcopy(coverage)
-            
-            
+            reachable = ICF._reachable(X, y)
+            coverage = ICF._coverage(reachable)
+            progress = False
+            count_ = 0
             for i, x in enumerate(X):
                 if len(reachable[i]) > len(coverage[i]):
-                    X_r = np.delete(X_r, i, axis=0)
-                    y_r = np.delete(y_r, i, axis=0)
-
-                    reachable_r.pop(i)
-                    coverage_r.pop(i)
-                    
-                else:
+                    X_r =[array for array in X_r if not np.array_equal(array, x)]
+                    y_r.pop(i-count_)
+                    count_ = count_+1
                     progress = True
             X = X_r.copy()
             y = y_r.copy()
-            reachable = deepcopy(reachable_r)
-            coverage = deepcopy(coverage_r)
-        return np.concatenate((X_r, y_r), axis = 1)
+        return np.column_stack((X_r, y_r))
 
