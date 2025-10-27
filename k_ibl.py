@@ -7,6 +7,9 @@ from enum import Enum
 from metrics import _base_metrics
 from enum import Enum
 from red_techniques import Reductor
+from mlxtend.feature_selection import SequentialFeatureSelector as SFS
+import sklearn_relief as relief
+from sklearn.neighbors import KNeighborsClassifier
 
 class ReductionTechnique(Enum):
     ALL_KNN = "AllKNN"
@@ -96,11 +99,16 @@ class KIBLearner:
         if self.sim_metric == IBLHyperParameters.SimMetrics.IVDM:
             self.ivdm_metric = Metrics.IVDM(self.CD, self.discrete_cols, self.continuous_cols)
     
-    def compute_distance(self, instance: np.ndarray) -> np.ndarray:
+    def compute_distance(self, instance: np.ndarray, weights = None) -> np.ndarray:
+        cd = self.CD
+        if weights is not None:
+            weights = np.append(weights, 1)
+            cd = cd*weights
+            instance = instance*weights
         if self.sim_metric == IBLHyperParameters.SimMetrics.EUCLIDEAN:
-            return Metrics.Base.euclidean_dist(self.CD, instance)
+            return Metrics.Base.euclidean_dist(cd, instance)
         elif self.sim_metric == IBLHyperParameters.SimMetrics.COSINE:
-            return Metrics.Base.cosine_dist(self.CD, instance)
+            return Metrics.Base.cosine_dist(cd, instance)
         elif self.sim_metric == IBLHyperParameters.SimMetrics.HEOM:
             return self.__heom() # TODO: complete
         elif self.sim_metric == IBLHyperParameters.SimMetrics.IVDM:
@@ -207,27 +215,63 @@ class KIBLearner:
             if d>= self.threshold:
                 self.CD = np.append(self.CD, instance.reshape(1, -1), axis=0)
 
+    def relief(self):
+        r = relief.Relief(n_features=len(self.CD[0]))
+        relief_transformed = r.fit_transform(
+            self.CD[:,:-1],
+            self.CD[:,-1]
+        )
+        weights = r.w_
+        weights = weights / np.max(weights)
+        return weights
+    
+    def SFS(self):
+        kNN = KNeighborsClassifier(n_neighbors=4)
+        X_train = self.CD[:,:-1]
+        y_train = self.CD[:,-1]
+        kNN = kNN.fit(X_train,y_train)
+        sfs_forward = SFS(
+            kNN,                    
+            k_features=(1, len(X_train[0])),  
+            forward=True,          
+            floating=False,        
+            scoring='accuracy',    
+            cv=10,                  
+            n_jobs=-1 
+        )
+        sfs_forward = sfs_forward.fit(X_train, y_train)
+        idx = sfs_forward.k_feature_idx_
+        weights = [1 if i in idx else 0 for i in range(len(X_train[0]))]
+        return weights
 
- 
-        
-    # def ir_KIBLAlgorithm(...) # kibl amb les diferents instance reduction techniques
-        # una reducció
-        # self.__train(train_df)
-        # self.__kIBLAlgorithm()
+    def KIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame): 
+        self.__train(df=train_df)
+        self.__kIBLAlgorithm(test_df)
     
-    
-    
-    
-    def kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame, reduction: ReductionTechnique = None) -> list[int]:
-    # def kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> list[int]:
+    def fw_KIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame, reduction: ReductionTechnique = ReductionTechnique.MCNN, weighted: str = 'relief'): 
+        self.__train(df=train_df)
+        if weighted == 'relief':
+            weights = self.relief()
+        elif weighted == 'SFS':
+            weights = self.SFS()
+        self.__kIBLAlgorithm(test_df, weights)
+
+    def ir_KIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame, reduction: ReductionTechnique = ReductionTechnique.MCNN): 
         self.__train(df=train_df, red_technique=reduction)
+        self.__kIBLAlgorithm(test_df)
+    
+    
+
+    def __kIBLAlgorithm(self, test_df: pd.DataFrame, weights: np.array = None) -> list[int]:
+    # def kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> list[int]:
+        
         
         predictions = []
         for _, instance in test_df.iterrows():
             instance = instance.to_numpy()
             # Compute similarity metric -> important no passar ultima columna (o la de la classe).
             # Obtain k-nearest neighbors
-            nearest_outputs = self.return_nn(self.compute_distance(instance))
+            nearest_outputs = self.return_nn(self.compute_distance(instance, weights))
             # Decide output based on voting scheme
             output = self.voting_schema(nearest_outputs)
             
