@@ -1,5 +1,18 @@
 import platform
 import re
+import os
+
+
+class GlobalConfig:
+    """
+    A utility class for global configuration settings.
+    It provides default paths for results and output files used across the project.
+    """
+    DEFAULT_RESULTS_PATH = os.path.join("res", "k_ibl_hyperparameters") # Path where the k_ibl_hyperparameters results are stored
+    DEFAULT_STATS_OUTPUT_PATH = os.path.join("res", "stat_tests") # Path where the Friedman-Nemenyi test results will be saved
+
+
+
 
 class TerminalColor:
     """

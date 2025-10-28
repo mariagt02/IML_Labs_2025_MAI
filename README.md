@@ -1,1 +1,41 @@
 # IML_Labs_2025_MAI
+
+## Environment Setup
+
+The python version used for this project is 3.11.13. To create a virtual environment and install the required packages, run the following commands:
+
+```bash
+python3.11 -m venv <path_to_venv>
+source <path_to_venv>/bin/activate  # On Windows use `<path_to_venv>\Scripts\activate`
+pip install -r requirements.txt
+```
+
+## File Structure
+
+- `stats.py`: Contains code and classes to perform statistical analysis and visualize results. It can be run from the command line with various options. `stats.py -h`.
+
+    ```code
+    usage: Friedman and Nemenyi Tests [-h] [--alpha ALPHA] [--base_dir BASE_DIR] [--datasets DATASETS [DATASETS ...]] --test_name TEST_NAME [--output_path OUTPUT_PATH]
+
+    Perform Friedman and Nemenyi tests on model results.
+
+    options:
+    -h, --help            show this help message and exit
+    --alpha ALPHA         Significance level for the tests.
+    --base_dir BASE_DIR   Base directory where the results files are stored.
+    --datasets DATASETS [DATASETS ...]
+                            Datasets to include in the analysis. Use 'all' to include all datasets in the base directory.
+    --test_name TEST_NAME
+                            Name of the test being run
+    --output_path OUTPUT_PATH
+                            Path to save the output results
+    ```
+    The results are stored in the specified output path, including text files and visualizations of the significance matrix. The default path where results are stored is `results/stat_test/<test_name>/`.
+
+
+- `pipeline.sh`: A shell script to automate the execution of the different parts of the project, including data preprocessing, model training, evaluation, and statistical analysis. It calls the relevant Python scripts with appropriate arguments based on the analysis that we have carried out to obtain the results shown in the report. It can be executed from the command using:
+    - `bash pipeline.sh`
+    - `./pipeline.sh` (after giving execute permissions with `chmod u+x pipeline.sh`)
+
+- `requirements.txt`: Lists the Python packages required for the project.
+- `utils.py`: Contains utility functions used across different scripts in the project.
