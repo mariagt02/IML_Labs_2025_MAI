@@ -16,6 +16,7 @@ plt.rcParams.update({
 class FriedmanTest:
     """
     Class to perform Friedman test and Nemenyi post-hoc test on model results.
+    
     Attributes:
         file_paths (list[str]): List of file paths containing model results in JSON format.
         alpha (float): Significance level for the tests.
@@ -183,7 +184,7 @@ class FriedmanTest:
 
         fig = plt.figure(figsize=(7, 7))
         plt.imshow(self.significance_matrix, cmap=self._cmap_name, interpolation="nearest")
-        # Show a legend with only two colors: 0 and 1
+        
         cmap = plt.get_cmap(self._cmap_name)
         legend_elements = [
             Patch(facecolor=cmap(0.0), edgecolor='k', label='0'),
@@ -215,7 +216,6 @@ if __name__ == "__main__":
         help="Significance level for the tests."
     )
 
-    # Add an argument to specify the base directory where the results files are stored
     args.add_argument(
         "--base_dir",
         type=str,
@@ -223,7 +223,6 @@ if __name__ == "__main__":
         help="Base directory where the results files are stored."
     )
 
-    # Add an argument to specify the datasets to include. Defaults to "all", which will make the script use all json files in the base directory.
     args.add_argument(
         "--datasets",
         type=str,
@@ -232,7 +231,6 @@ if __name__ == "__main__":
         help="Datasets to include in the analysis. Use 'all' to include all datasets in the base directory."
     )
     
-    # Mandatory argument to specify the name of the test that is being run
     args.add_argument(
         "--test_name",
         type=str,
@@ -240,7 +238,6 @@ if __name__ == "__main__":
         help="Name of the test being run"
     )
     
-    # Optional argument to specify the output path for the results
     args.add_argument(
         "--output_path",
         type=str,
