@@ -9,9 +9,9 @@ import os
 from utils import GlobalConfig, TerminalColor
 from matplotlib.patches import Patch
 
-plt.rcParams.update({
-    "text.usetex": True,
-})
+# plt.rcParams.update({
+#     "text.usetex": True,
+# })
 
 class FriedmanTest:
     """
@@ -96,6 +96,7 @@ class FriedmanTest:
         algorithms = self.df.columns
         ranks = self.df.rank(axis=1, ascending=False)
         avg_ranks = ranks.mean(axis=0).sort_values()
+        self.avg_ranks = avg_ranks
 
         results = np.zeros(shape=(num_algorithms, num_algorithms))
         for i, alg_1 in enumerate(algorithms):
@@ -137,7 +138,7 @@ class FriedmanTest:
         if reject_null:
             f.write(f"Null hypothesis has been rejected. This means that there is a significant difference between at least two algorithms.\n")
             f.write(f"To find out which algorithms differ significantly, we perform the Nemenyi post-hoc test.\n")
-            
+            f.write(str(self.avg_ranks))
             num_significant = np.sum(self.significance_matrix) // 2
             f.write(f"Number of significant pairwise differences found: {num_significant}\n")
 
@@ -273,7 +274,7 @@ if __name__ == "__main__":
     
     os.makedirs(parsed_args.output_path, exist_ok=True)
 
-    test = FriedmanTest(res_paths, alpha=0.1, output_path=parsed_args.output_path)
+    test = FriedmanTest(res_paths, alpha=parsed_args.alpha, output_path=parsed_args.output_path)
     test.run()
     test.summary()
     test.plot_nemenyi_matrix()

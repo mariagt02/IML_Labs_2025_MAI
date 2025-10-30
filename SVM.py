@@ -5,6 +5,9 @@ from typing import Any, Dict, List, Tuple
 import json
 import time
 import re
+import itertools
+from utils import GlobalConfig
+import os
 
 def calculate_accuracy(y_pred: List[Any], y_true: List[Any], percentage: bool = True) -> Tuple[int, float]:
     correct = 0
@@ -15,7 +18,7 @@ def calculate_accuracy(y_pred: List[Any], y_true: List[Any], percentage: bool = 
     
     return correct, round(ratio * 100, 4) if percentage else ratio
 
-def format_json_key(kernel_name: str, params: Dict[str, Any]) -> str:
+def format_json_key(kernel_name: str, params: Dict[str, Any], c: float) -> str:
     param_list = []
     # Format parameters into a string for the key
     for k, v in params.items():
@@ -27,7 +30,7 @@ def format_json_key(kernel_name: str, params: Dict[str, Any]) -> str:
     
     param_str = "_".join(param_list)
     
-    key = f"svm.svc_{kernel_name}"
+    key = f"svm.svc_{kernel_name}_c_{c}"
     if param_str:
         key += f"_{param_str}"
     return key
@@ -37,7 +40,8 @@ def train_and_evaluate_svc(
     df_test: pd.DataFrame, 
     fold_index: int, 
     kernel: str, 
-    svc_params: Dict[str, Any]
+    svc_params: Dict[str, Any],
+    c: float = 1.0
 ) -> Tuple[float, List[Any], List[Any], float]:
     
     X_train = df_train.iloc[:, :-1]
@@ -49,8 +53,8 @@ def train_and_evaluate_svc(
     start_time = time.time()
     
     model = svm.SVC(
-        kernel=kernel, 
-        C=1.0, 
+        kernel=kernel,  
+        C=c,
         random_state=42, 
         **svc_params
     )
@@ -73,13 +77,38 @@ def train_and_evaluate_svc(
 if __name__ == "__main__":
         
     kernel_configs = [
-        ("linear", {}),                                  # Linear: ⟨x,x′⟩
-        ("poly", {"degree": 3, "coef0": 0.0}),           # Polynomial: (γ⟨x,x′⟩+r)^d
-        ("rbf", {"gamma": 'scale'}),                     # Rbf: exp(−γ‖x−x′‖^2)
-        ("sigmoid", {"coef0": 0.0, "gamma": 'scale'}),   # Sigmoid: tanh(γ⟨x,x′⟩+r)
+        ("linear", {}),                                                     # Linear: ⟨x,x′⟩
+        
+        ("poly", {"degree": 1, "coef0": 0.0, "gamma": 1.0}),  
+        ("poly", {"degree": 1, "coef0": 0.0, "gamma": "scale"}),            # Polynomial: (γ⟨x,x′⟩+r)^d
+        ("poly", {"degree": 1, "coef0": 0.0, "gamma": "auto"}),
+        ("poly", {"degree": 3, "coef0": 0.0, "gamma": "scale"}),            
+        ("poly", {"degree": 3, "coef0": 0.0, "gamma": "auto"}),
+        ("poly", {"degree": 5, "coef0": 0.0, "gamma": "scale"}),
+        ("poly", {"degree": 5, "coef0": 0.0, "gamma": "auto"}),
+        
+        ("poly", {"degree": 1, "coef0": 1.0, "gamma": "scale"}),            # Polynomial: (γ⟨x,x′⟩+r)^d
+        ("poly", {"degree": 1, "coef0": 1.0, "gamma": "auto"}),
+        ("poly", {"degree": 3, "coef0": 1.0, "gamma": "scale"}),            
+        ("poly", {"degree": 3, "coef0": 1.0, "gamma": "auto"}),
+        ("poly", {"degree": 5, "coef0": 1.0, "gamma": "scale"}),
+        ("poly", {"degree": 5, "coef0": 1.0, "gamma": "auto"}),
+        
+        ("rbf", {"gamma": 'scale'}),                                        # Rbf: exp(−γ‖x−x′‖^2)
+        ("rbf", {"gamma": 'auto'}),                     
+        
+        ("sigmoid", {"coef0": 0.0, "gamma": 'scale'}),                      # Sigmoid: tanh(γ⟨x,x′⟩+r)
+        ("sigmoid", {"coef0": 0.0, "gamma": 'auto'}),   
+        ("sigmoid", {"coef0": 1.0, "gamma": 'scale'}),  
+        ("sigmoid", {"coef0": 1.0, "gamma": 'auto'}),   
     ]
+    
+    Cs = [0.1, 1.0, 10.0] # inversely proportional
+    
+    param_combs = list(itertools.product(*[kernel_configs, Cs]))
+    
 
-    dataset_names = ["credit-a", "pen-based"]
+    dataset_names = ['grid','vowel']
     all_kernel_results = {} 
 
     for dataset in dataset_names:
@@ -91,7 +120,8 @@ if __name__ == "__main__":
         full_dataset_results = {}
         
         # Loop through each kernel configuration
-        for kernel_name, params in kernel_configs:
+        experiment_start_time = time.time()
+        for (kernel_name, params), c in param_combs:
             print(f"\n--- Evaluating Kernel: {kernel_name.upper()} (Params: {params}) ---")
             
             fold_results_for_kernel = {} # Stores results for all folds for the current kernel
@@ -104,7 +134,8 @@ if __name__ == "__main__":
                     df_test, 
                     i + 1, # Fold index
                     kernel=kernel_name,
-                    svc_params=params
+                    svc_params=params,
+                    c=c
                 )
                 
                 fold_accuracy_ratios.append(accuracy_ratio)
@@ -123,14 +154,16 @@ if __name__ == "__main__":
                 print(f"\n--- Average {kernel_name.upper()} Accuracy: {avg_accuracy_percentage:.4f}% ---")
                 
                 # Format the key and store the detailed fold results in the final structure
-                json_key = format_json_key(kernel_name, params)
+                json_key = format_json_key(kernel_name, params, c)
                 full_dataset_results[json_key] = fold_results_for_kernel
+                full_dataset_results[json_key]["total_accuracy"] = avg_accuracy_percentage
+                full_dataset_results[json_key]["total_time"] = time.time() - experiment_start_time
                 
                 # Store average accuracy for the final console summary
                 all_kernel_results[dataset] = all_kernel_results.get(dataset, {})
                 all_kernel_results[dataset][kernel_name] = avg_accuracy_percentage
 
-        with open(f"resultssvm_{dataset}.json", "w+") as f:
+        with open(os.path.join(GlobalConfig.DEFAULT_SVM_RESULTS_PATH, f"results_{dataset}.json"), "w+") as f:
             json_str = json.dumps(full_dataset_results, indent=3)
             json_str = re.sub(r"\[\s+([\d.,\s]+?)\s+\]", lambda m: "[" + " ".join(m.group(1).split()) + "]", json_str)
             f.write(json_str)

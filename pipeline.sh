@@ -44,6 +44,10 @@ echo "Starting statistical tests for model selection..."
 python stats.py --alpha 0.1 --datasets credit-a pen-based --test_name k-IBL_hyperparameters_2_datasets
 python stats.py --alpha 0.1 --datasets all --test_name k-IBL_hyperparameters_all_datasets
 
+# 4. Statistical Tests for SVM
+echo "Starting statistical tests for svm..."
+python stats.py --alpha 0.1 --datasets credit-a pen-based --test_name SVM_2_datasets --base_dir "res\svm"
+python stats.py --alpha 0.1 --datasets all --test_name SVM_all_datasets --base_dir "res\svm"
 
 
 # Visualizations for the reduction techniques on the different datasets
