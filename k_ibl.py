@@ -16,6 +16,10 @@ class ReductionTechnique(Enum):
     MCNN = "MCNN"
     ICF = "ICF"
     
+    @classmethod
+    def get_all_values(cls) -> list[str]:
+        return [member.value for member in cls]
+    
     
 class WeightingTechnique(Enum):
     RELIEF = "relief"
@@ -53,8 +57,8 @@ class IBLHyperParameters:
 
     
     @classmethod
-    def get_all_sim_metrics(cls) -> list[str]:
-        return [member.value for member in cls.SimMetrics]
+    def get_all_sim_metrics(cls, exclude = [SimMetrics.HEOM, SimMetrics.GWHSM]) -> list[str]:
+        return [member.value for member in cls.SimMetrics if member not in exclude]
     
     @classmethod
     def get_all_voting_schemes(cls) -> list[str]:

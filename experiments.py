@@ -79,7 +79,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output_dir",
         type=str,
-        default=GlobalConfig.DEFAULT_RESULTS_PATH,
+        default=GlobalConfig.DEFAULT_HYPERPARAM_RESULTS_PATH,
         help="Directory where output files will be saved."
     )
     

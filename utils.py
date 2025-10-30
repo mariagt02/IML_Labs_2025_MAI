@@ -8,8 +8,10 @@ class GlobalConfig:
     A utility class for global configuration settings.
     It provides default paths for results and output files used across the project.
     """
-    DEFAULT_RESULTS_PATH = os.path.join("res", "k_ibl_hyperparameters") # Path where the k_ibl_hyperparameters results are stored
-    DEFAULT_STATS_OUTPUT_PATH = os.path.join("res", "stat_tests") # Path where the Friedman-Nemenyi test results will be saved
+    DEFAULT_RESULTS_PATH = "res" # Path where all the results results are stored
+    DEFAULT_HYPERPARAM_RESULTS_PATH = os.path.join(DEFAULT_RESULTS_PATH, "k_ibl_hyperparameters") # Path where the k_ibl_hyperparameters results are stored
+    DEFAULT_STATS_OUTPUT_PATH = os.path.join(DEFAULT_RESULTS_PATH, "stat_tests") # Path where the Friedman-Nemenyi test results will be saved
+    DEFAULT_REDUCTION_VISUALIZATIONS_PATH = os.path.join(DEFAULT_RESULTS_PATH, "reduction_visualizations") # Path where the reduction technique visualizations will be saved
     DEFAULT_DATASET_DIR = "data" # Directory where raw datasets are stored
     DEFAULT_PREPROCESSED_DATASET_DIR = "preprocessed" # Directory where preprocessed datasets are stored
 

@@ -59,6 +59,34 @@ pip install -r requirements.txt
     -o, --overwrite       If set, existing output files will be overwritten. Otherwise, datasets for which results already exist will be skipped.
     ```
 
+- `reduction.py`: This script handles dimensionality reduction and visualization of datasets using techniques like PCA and t-SNE. It allows users to specify datasets, reduction techniques, and parameters through command-line arguments. The reduced datasets and visualizations are saved to the specified output directory. `reduction.py -h`:
+    ```code
+    usage: reduction.py [-h] [--dataset_dir DATASET_DIR] [--datasets DATASETS [DATASETS ...]] [--output_dir OUTPUT_DIR] (--mcnn | --icf | --allknn) [-k K]
+                    [--metric {euc,cos,ivdm,all} [{euc,cos,ivdm,all} ...]] (--pca | --tsne) [--save_original]
+
+    Visualization of the reduction techniques effects for the given datasets.
+
+    options:
+    -h, --help            show this help message and exit
+    --dataset_dir DATASET_DIR
+                            Directory where preprocessed datasets are stored.
+    --datasets DATASETS [DATASETS ...]
+                            List of dataset names to run experiments on. Use 'all' to run on all available datasets.
+    --output_dir OUTPUT_DIR
+                            Directory where output files will be saved.
+    --mcnn                Use MCNN reduction technique.
+    --icf                 Use ICF reduction technique (requires --k).
+    --allknn              Use All-KNN reduction technique (requires --k and --metric).
+    -k K                  Number of neighbors for ICF reduction.
+    --metric {euc,cos,ivdm,all} [{euc,cos,ivdm,all} ...]
+                            List of similarity metrics to use with AllKNN reduction. Use 'all' to include all available metrics.
+    --pca                 Use PCA for dimensionality reduction.
+    --tsne                Use t-SNE for dimensionality reduction.
+    --save_original       If set, saves the original dataset visualization before reduction.
+    ```
+
+- `dataset.py`: Contains the `DatasetLoader` class, which is responsible for loading the different files of a dataset. It also contains the `DatasetVisualizer` class, which provides methods to visualize datasets in 2D and 3D (complete or reduced) using dimensionality reduction techniques like PCA and t-SNE. If executed as a script, it visualizes all the complete datasets in 2D using PCA and t-SNE.
+
 - `pipeline.sh`: A shell script to automate the execution of the different parts of the project, including data preprocessing, model training, evaluation, and statistical analysis. It calls the relevant Python scripts with appropriate arguments based on the analysis that we have carried out to obtain the results shown in the report. It can be executed from the command using:
     - `bash pipeline.sh`
     - `./pipeline.sh` (after giving execute permissions with `chmod u+x pipeline.sh`)

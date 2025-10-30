@@ -2,7 +2,7 @@ import os
 import re
 import pandas as pd
 import string
-from utils import TerminalColor
+from utils import TerminalColor, GlobalConfig
 from typing import Literal
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
@@ -216,126 +216,93 @@ class DatasetVisualizer:
         
         self.__allowed_dims = [2, 3]
         self.AllowedDims = Literal[tuple(self.__allowed_dims)]
+        
+        self.custom_colors = [
+            "#FF0000", "#0000FF", "#00FF00", "#FFFF00", "#FF00FF",
+            "#00FFFF", "#FF8000", "#8000FF", "#008000", "#FF0080", "#000000"
+        ]
     
     
-    def visualize_df(self, num_dims: "DatasetVisualizer.AllowedDims", df: np.ndarray = None):
+    def visualize_df(self, num_dims: "DatasetVisualizer.AllowedDims", df: np.ndarray = None, dim_reduction: Literal["pca", "tsne"] = "tsne", show: bool = False) -> tuple[np.ndarray, np.ndarray, plt.Figure]:
         if num_dims not in self.__allowed_dims:
             raise ValueError(f"Received {num_dims}. Only allowed {self.__allowed_dims}")
         
         if df is None:
-            train_df, test_df = self.df_loader.get_fold(1)    
+            train_df, test_df = self.df_loader.get_fold(1)
             df = pd.concat([train_df, test_df], axis=0)
             X = df[df.columns[:-1]]
-            y = df[df.columns[-1]]
+            y = df[df.columns[-1]].to_numpy()
         else:
-            X = df[:,:-1]
-            y = df[:,-1]
+            X = df[:, :-1]
+            y = df[:, -1]
         
         classes = np.unique(y)
+        n_classes = len(classes)
+        cmap = ListedColormap(self.custom_colors[:n_classes])
         
-        custom_colors = [
-            '#FF0000',  # Red
-            '#0000FF',  # Blue
-            '#00FF00',  # Green
-            '#FFFF00',  # Yellow
-            '#FF00FF',  # Magenta
-            '#00FFFF',  # Cyan
-            '#FF8000',  # Orange
-            '#8000FF',  # Purple
-            '#008000',  # Dark Green
-            '#FF0080',  # Pink
-        ]
-        
-    
-        n_classes = len(np.unique(y))
-        cmap = ListedColormap(custom_colors[:n_classes])
-    
-        
-        if num_dims == 2:
-            reducer = PCA(n_components=2, random_state=42)
-        else:
-            reducer = PCA(n_components=3, random_state=42)
-        
+        reducer = TSNE(n_components=num_dims, random_state=42) if dim_reduction == "tsne" else PCA(n_components=num_dims)
         X_reduced = reducer.fit_transform(X)
         
-        plt.figure(figsize=(10, 5))
-        # plt.rcParams.update({
-        #     "text.usetex": True,
-        # })
+        fig = self._plot(X_reduced, y, classes, cmap, num_dims, dim_reduction, title_prefix=f"{self.df_loader.dataset_name} original")
+        if show:
+            plt.show()
+        return X_reduced, y, fig
+
+
+    def visualize_reduced_df(self, X_reduced: np.ndarray, y: np.ndarray, dataset_name: str, reduction_name: str, num_dims: int = 2, show: bool = False, dim_reduction: Literal["pca", "tsne"] = "tsne") -> plt.Figure:
+        if num_dims not in self.__allowed_dims:
+            raise ValueError(f"Received {num_dims}. Only allowed {self.__allowed_dims}")
+        
+        classes = np.unique(y)
+        n_classes = len(classes)
+        cmap = ListedColormap(self.custom_colors[:n_classes])
+        
+        fig = self._plot(X_reduced, y, classes, cmap, num_dims, dim_reduction=dim_reduction, title_prefix=f"{dataset_name} reduced ({reduction_name})")
+        if show:
+            plt.show()
+        return fig
+
+
+    def _plot(self, X_reduced: np.ndarray, y: np.ndarray, classes: np.ndarray, cmap: ListedColormap, num_dims: int, dim_reduction: str = "", title_prefix: str = "") -> plt.Figure:
+        fig = plt.figure(figsize=(10, 5))
+        
+        plt.rcParams.update({
+            "text.usetex": True,
+        })
         
         if num_dims == 2:
             for i, cls in enumerate(classes):
                 idx = np.where(y == cls)
-                plt.scatter(
-                    X_reduced[idx, 0],
-                    X_reduced[idx, 1],
-                    color=cmap(i),
-                    edgecolors="black",
-                    linewidth=0.2,
-                    label=str(cls)
-                )
+                plt.scatter(X_reduced[idx, 0], X_reduced[idx, 1], color=cmap(i), edgecolors="black", linewidth=0.2, label=int(float(str(cls))))
             plt.xlabel("Dimension 1")
             plt.ylabel("Dimension 2")
-            plt.title(f"2D {self.df_loader.dataset_name} dataset visualization (t-SNE)", fontsize=14, fontweight="bold")
-            plt.legend(title='Class')
-            
+            plt.title(f"{dim_reduction.upper()} visualization of {title_prefix}", fontsize=14, fontweight="bold")
+            plt.legend(title="Class")
         else:
             ax = plt.axes(projection="3d")
-            
             for i, cls in enumerate(classes):
                 idx = np.where(y == cls)
-                ax.scatter3D(
-                    X_reduced[idx, 0].flatten(),
-                    X_reduced[idx, 1].flatten(),
-                    X_reduced[idx, 2].flatten(),
-                    color=cmap(i),
-                    label=str(cls),
-                    edgecolor="black",
-                    linewidth=0.2
-                )
+                ax.scatter3D(X_reduced[idx, 0].flatten(), X_reduced[idx, 1].flatten(), X_reduced[idx, 2].flatten(), color=cmap(i), label=int(float(str(cls))), edgecolor="black", linewidth=0.2)
             ax.set_xlabel("Component 1")
             ax.set_ylabel("Component 2")
             ax.set_zlabel("Component 3")
-            plt.title(f"3D {self.df_loader.dataset_name} dataset visualization (t-SNE)", fontsize=14, fontweight="bold")
-            plt.legend(title='Class')
-        
+            plt.title(f"{dim_reduction.upper()} visualization of {title_prefix}", fontsize=14, fontweight="bold")
+            plt.legend(title="Class")
+
         plt.tight_layout()
-        plt.show()
+        return fig
         
-        return X_reduced, y, reducer
-    
-    # def pca_analysis(self, X, y, n_components):
-    #     pca = PCA(n_components=n_components)
-    #     X_r = pca.fit_transform(X)
-    #     principal_Df = pd.DataFrame(data=X_r
-    #                                 , columns=['principal component 1', 'principal component 2'])
-    #     if n_components == 2:
-    #         plt.figure()
-    #         plt.figure(figsize=(15, 15))
-    #         plt.xticks(fontsize=12)
-    #         plt.yticks(fontsize=14)
-    #         plt.xlabel('Principal Component - 1', fontsize=20)
-    #         plt.ylabel('Principal Component - 2', fontsize=20)
-    #         plt.title("Principal Component Analysis", fontsize=20)
-    #         targets = set(y)
-    #         for target in targets:
-    #             indicesToKeep = y == target
-    #             plt.scatter(principal_Df.loc[indicesToKeep, 'principal component 1']
-    #                         , principal_Df.loc[indicesToKeep, 'principal component 2'], s=50)
-
-    #         plt.legend(targets, prop={'size': 15}, loc='upper right')
-    #     return X_r
-        
-        
-        
-        
-
 
 
 if __name__ == "__main__":
-                
-    df_visualizer = DatasetVisualizer(
-        dataset_name="credit-a"
-    )
     
-    df_visualizer.visualize_df(num_dims=2)
+    for df in ["credit-a", "pen-based", "vowel", "grid"]:            
+        df_visualizer = DatasetVisualizer(
+            dataset_name=df
+        )
+        
+        _, _, fig = df_visualizer.visualize_df(num_dims=2, dim_reduction="pca", show=False)
+        plt.savefig(os.path.join(GlobalConfig.DEFAULT_REDUCTION_VISUALIZATIONS_PATH, f"{df_visualizer.df_loader.dataset_name}_original_pca.png"), dpi=300)
+        
+        _, _, fig = df_visualizer.visualize_df(num_dims=2, dim_reduction="tsne", show=False)
+        plt.savefig(os.path.join(GlobalConfig.DEFAULT_REDUCTION_VISUALIZATIONS_PATH, f"{df_visualizer.df_loader.dataset_name}_original_tsne.png"), dpi=300)

@@ -219,7 +219,7 @@ if __name__ == "__main__":
     args.add_argument(
         "--base_dir",
         type=str,
-        default=GlobalConfig.DEFAULT_RESULTS_PATH,
+        default=GlobalConfig.DEFAULT_HYPERPARAM_RESULTS_PATH,
         help="Base directory where the results files are stored."
     )
 

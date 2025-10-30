@@ -18,9 +18,9 @@ class AllKNN:
         if metric == "euc":
             metric_func = Metrics.Base.euclidean_dist
         elif metric == "cos":
-            metric_func = Metrics.Base.cosine_sim
+            metric_func = Metrics.Base.cosine_dist
         elif metric == "ivdm":
-            metric_func = Metrics.Base.ivdm
+            metric_func = Metrics.IVDM.compute
         else:
             raise ValueError(f"Unknown metric: {metric}")
 
