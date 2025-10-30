@@ -82,6 +82,12 @@ def parse_args() -> argparse.Namespace:
         default=GlobalConfig.DEFAULT_RESULTS_PATH,
         help="Directory where output files will be saved."
     )
+    
+    parser.add_argument(
+        "-o", "--overwrite",
+        action="store_true",
+        help="If set, existing output files will be overwritten. Otherwise, datasets for which results already exist will be skipped."
+    )
 
     parsed_args = parser.parse_args()
     
@@ -141,6 +147,12 @@ if __name__ == "__main__":
     
     test_num = 1
     for dataset in dataset_names:
+        output_path = os.path.join(args.output_dir, f"results_{dataset}.json")
+        if os.path.exists(output_path) and not args.overwrite:
+            print(f"{TerminalColor.colorize('Skipping', color='red', bold=True)} dataset {TerminalColor.colorize(dataset, color='yellow')} as results file already exists at {TerminalColor.colorize(output_path, color='green')}. Use --overwrite to force re-computation.")
+            continue
+        
+        
         dataset_loader = DatasetLoader(dataset_name=dataset, dataset_dir=args.dataset_dir)
         dataset_loader.load()
         
@@ -183,7 +195,6 @@ if __name__ == "__main__":
         
             test_num += 1
         
-        output_path = os.path.join(args.output_dir, f"results_{dataset}.json")
         with open(output_path, "w+") as f:
             json.dump(results, f)
     
