@@ -264,8 +264,9 @@ class KIBLearner:
 
     def __kIBLAlgorithm(self, test_df: pd.DataFrame, weights: np.array = None) -> list[int]:
     # def kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> list[int]:
-        
-        
+        cd = self.CD * weights
+        if self.sim_metric == IBLHyperParameters.SimMetrics.IVDM:
+            self.ivdm_metric = Metrics.IVDM(cd, self.discrete_cols, self.continuous_cols)
         predictions = []
         for _, instance in test_df.iterrows():
             instance = instance.to_numpy()
