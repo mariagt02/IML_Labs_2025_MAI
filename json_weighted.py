@@ -1,9 +1,10 @@
 from k_ibl import KIBLearner, IBLHyperParameters, ReductionTechnique
 import json
 import itertools
+import os
 from sklearn.neighbors import KNeighborsClassifier
 from dataset import DatasetLoader
-from utils import TerminalColor
+from utils import TerminalColor, GlobalConfig
 import time
 
 
@@ -19,13 +20,13 @@ def calculate_accuracy(y_pred: list[int], y_true: list[int], percentage: bool = 
 
 if __name__ == "__main__":
     
-    k = 3
+    k = 7
     metric = 'euc'
-    voting = 'mp'
-    retention = 'nr'
+    voting = 'bc'
+    retention = 'dd'
     dataset_names = [
         "credit-a",
-        "pen-based"
+        # "pen-based"
     ]
     weighting = [None, "relief", "SFS"]
     
@@ -50,8 +51,9 @@ if __name__ == "__main__":
 
             experiment_start_time = time.time()
             for i, (df_train, df_test) in enumerate(dataset_loader):
+        
                 fold_start_time = time.time()
-                y_pred = ibl_learner.fw_KIBLAlgorithm(df_train, df_test, weighting_method)
+                y_pred = ibl_learner.KIBLAlgorithm(df_train, df_test, weighted=weighting_method)
                 fold_total_time = time.time() - fold_start_time
                 y_true = df_test[df_test.columns[-1]]
 
@@ -75,6 +77,6 @@ if __name__ == "__main__":
             test_num += 1
         
         
-        with open(f"results_weighted_{dataset}.json", "w+") as f:
+        with open(os.path.join(GlobalConfig.DEFAULT_WEIGHTED_RESULTS_PATH, f"results_{dataset}.json"), "w+") as f:
             json.dump(results, f)
     

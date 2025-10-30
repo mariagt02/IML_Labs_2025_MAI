@@ -266,9 +266,9 @@ class DatasetVisualizer:
     def _plot(self, X_reduced: np.ndarray, y: np.ndarray, classes: np.ndarray, cmap: ListedColormap, num_dims: int, dim_reduction: str = "", title_prefix: str = "") -> plt.Figure:
         fig = plt.figure(figsize=(10, 5))
         
-        plt.rcParams.update({
-            "text.usetex": True,
-        })
+        # plt.rcParams.update({
+        #     "text.usetex": True,
+        # })
         
         if num_dims == 2:
             for i, cls in enumerate(classes):

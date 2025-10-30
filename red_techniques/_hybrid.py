@@ -7,18 +7,6 @@ __all__ = ["ICF"]
 
 class ICF:
     
-    # @staticmethod
-    # def wilson_editing(X, y):
-    #     y_pred = []
-    #     for _, instance in X.iterrows():
-    #         instance = instance.to_numpy()
-    #         nearest_outputs = ICF.return_nn(Metrics.Base.euclidean_dist(X, instance))
-    #         output = ICF.modified_plurality(nearest_outputs)
-    #         y_pred.append(output)
-    #     mask = np.where(y_pred != y)
-    #     X_r = np.delete(X, mask, axis=0)
-    #     y_r = np.delete(y, mask, axis=0)
-    #     return X_r, y_r
     
     @staticmethod
     def _wilson_editing(X, y, k):
@@ -59,6 +47,7 @@ class ICF:
                 if i not in coverage_array[reach]:
                     coverage_array[reach].append(i)
         return [np.array(elem) for elem in coverage_array]
+    
 
     @staticmethod
     def reduce(data, k):
@@ -73,15 +62,10 @@ class ICF:
             y_r = y.copy()
             reachable = ICF._reachable(X, y)
             coverage = ICF._coverage(reachable)
-            progress = False
-            count_ = 0
-            for i, x in enumerate(X):
-                if len(reachable[i]) > len(coverage[i]):
-                    X_r =[array for array in X_r if not np.array_equal(array, x)]
-                    y_r.pop(i-count_)
-                    count_ = count_+1
-                    progress = True
-            X = X_r.copy()
-            y = y_r.copy()
+            mask = [len(reachable[i]) <= len(coverage[i]) for i in range(len(X))]
+            X = [X[i] for i in range(len(X)) if mask[i]]
+            y = [y[i] for i in range(len(y)) if mask[i]]
+            if all(mask):
+                progress = False
         return np.column_stack((X_r, y_r))
 

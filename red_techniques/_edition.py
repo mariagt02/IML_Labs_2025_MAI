@@ -9,7 +9,7 @@ __all__ = ["AllKNN"]
 class AllKNN:
 
     @staticmethod
-    def reduce(data: np.ndarray, k: int, metric: Literal["euc", "cos", "ivdm"]="euc"):
+    def reduce(data: np.ndarray, k: int, metric: Literal["euc", "cos", "ivdm"]="euc", ivdm_metric = Metrics.IVDM):
         
         # print(f'\nOriginal data shape: {data.shape}')
 
@@ -20,7 +20,7 @@ class AllKNN:
         elif metric == "cos":
             metric_func = Metrics.Base.cosine_dist
         elif metric == "ivdm":
-            metric_func = Metrics.IVDM.compute
+            metric_func = ivdm_metric.compute
         else:
             raise ValueError(f"Unknown metric: {metric}")
 

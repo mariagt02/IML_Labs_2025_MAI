@@ -35,7 +35,7 @@ def format_json_key(kernel_name: str, params: Dict[str, Any], c: float) -> str:
         key += f"_{param_str}"
     return key
 
-def train_and_evaluate_svc(
+def svmAlgorithm(
     df_train: pd.DataFrame, 
     df_test: pd.DataFrame, 
     fold_index: int, 
@@ -129,7 +129,7 @@ if __name__ == "__main__":
             
             # Loop through each cross-validation fold
             for i, (df_train, df_test) in enumerate(dataset_loader):
-                accuracy_ratio, y_true, y_pred, fold_time = train_and_evaluate_svc(
+                accuracy_ratio, y_true, y_pred, fold_time = svmAlgorithm(
                     df_train, 
                     df_test, 
                     i + 1, # Fold index

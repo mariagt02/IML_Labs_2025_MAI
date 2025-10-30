@@ -184,5 +184,3 @@ if __name__ == "__main__":
         plt.savefig(output_path, dpi=300)
         print(f"Saved reduced dataset visualization to {TerminalColor.colorize(output_path, 'green')}")
         
-        
-    

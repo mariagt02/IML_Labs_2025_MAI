@@ -30,8 +30,6 @@ class IBLHyperParameters:
         EUCLIDEAN = "euc"
         COSINE = "cos"
         IVDM = "ivdm"
-        HEOM = "heom"
-        GWHSM = "gwhsm"
     
     class Voting(str, Enum):
         # The voting scheme
@@ -46,7 +44,7 @@ class IBLHyperParameters:
         DEGREE_OF_DISAGREEMENT = "dd"
     
     @classmethod
-    def get_all_values(cls, exclude = [SimMetrics.HEOM, SimMetrics.GWHSM]) -> list[list[str]]:
+    def get_all_values(cls, exclude) -> list[list[str]]:
         # We exclude the distance metrics that are not implemented
         results = []
         for _, obj in cls.__dict__.items():
@@ -57,8 +55,8 @@ class IBLHyperParameters:
 
     
     @classmethod
-    def get_all_sim_metrics(cls, exclude = [SimMetrics.HEOM, SimMetrics.GWHSM]) -> list[str]:
-        return [member.value for member in cls.SimMetrics if member not in exclude]
+    def get_all_sim_metrics(cls) -> list[str]:
+        return [member.value for member in cls.SimMetrics]
     
     @classmethod
     def get_all_voting_schemes(cls) -> list[str]:
@@ -120,21 +118,10 @@ class KIBLearner:
         Raises:
             ValueError: If an unknown column type is encountered in the dataset.
         """
-        data = df.to_numpy()
-
-        self.CD = None
+        self.CD = df.to_numpy()
         self.discrete_cols = []
         self.continuous_cols = []
         # added this because otherwise the CD keeps shrinking at each fold
-
-        if not red_technique:
-            self.CD = data
-        elif red_technique == ReductionTechnique.MCNN:
-            self.CD = Reductor.MCNN.reduce(data)
-        elif red_technique == ReductionTechnique.ALL_KNN:
-            self.CD = Reductor.ALLKNN.reduce(data=data, k=self.k)
-        elif red_technique == ReductionTechnique.ICF:
-            self.CD = Reductor.ICF.reduce(data=data, k = self.k)
         
         # When loading the train dataset, we can determine whether each column is discrete or continuous
         for i, col in enumerate(df.columns[:-1]):
@@ -146,11 +133,10 @@ class KIBLearner:
             else:
                 raise ValueError(f"Unkown column type: {type(col_element)}")
             
-        if self.sim_metric == IBLHyperParameters.SimMetrics.IVDM:
-            self.ivdm_metric = Metrics.IVDM(self.CD, self.discrete_cols, self.continuous_cols)
+        
     
     
-    def compute_distance(self, instance: np.ndarray, weights = None) -> np.ndarray:
+    def compute_distance(self, instance: np.ndarray) -> np.ndarray:
         """
         Compute the distance between a given instance and all instances in the concept descriptor.
         If feature weights are provided, they are applied during distance computation. Otherwise, all features are treated equally.
@@ -162,23 +148,13 @@ class KIBLearner:
         Returns:
             np.ndarray: Array of sorted instances (from closest to farthest) between the query instance and all instances in the concept descriptor.
         """
-        cd = self.CD
-        
-        if weights is not None:
-            weights = np.append(weights, 1)
-            cd = cd * weights
-            instance = instance * weights
         
         if self.sim_metric == IBLHyperParameters.SimMetrics.EUCLIDEAN:
-            return Metrics.Base.euclidean_dist(cd, instance)
+            return Metrics.Base.euclidean_dist(self.CD, instance)
         elif self.sim_metric == IBLHyperParameters.SimMetrics.COSINE:
-            return Metrics.Base.cosine_dist(cd, instance)
-        elif self.sim_metric == IBLHyperParameters.SimMetrics.HEOM:
-            return self.__heom() # TODO: complete
+            return Metrics.Base.cosine_dist(self.CD, instance)
         elif self.sim_metric == IBLHyperParameters.SimMetrics.IVDM:
             return self.ivdm_metric.compute(instance)
-        elif self.sim_metric == IBLHyperParameters.SimMetrics.GWHSM:
-            return self.__gwhsm() # TODO: complete
     
     
     def return_nn(self, ordered_dist: np.ndarray) -> np.ndarray:
@@ -290,7 +266,7 @@ class KIBLearner:
 
     def relief(self):
         r = relief.Relief(n_features=len(self.CD[0]))
-        relief_transformed = r.fit_transform(
+        r.fit_transform(
             self.CD[:,:-1],
             self.CD[:,-1]
         )
@@ -299,7 +275,7 @@ class KIBLearner:
         return weights
     
     def SFS(self):
-        kNN = KNeighborsClassifier(n_neighbors=4)
+        kNN = KNeighborsClassifier(n_neighbors=7)
         X_train = self.CD[:,:-1]
         y_train = self.CD[:,-1]
         kNN = kNN.fit(X_train,y_train)
@@ -331,72 +307,82 @@ class KIBLearner:
         Returns:
             list[int]: Predicted labels for the test dataset.
         """
+        self.__train(df=train_df) # Initialize concept descriptor
+        
+        weights = self._compute_weights(weighted)
+        # print(weights)
+        self.CD = self.CD * np.append(weights, 1)
+        
+        if self.sim_metric == IBLHyperParameters.SimMetrics.IVDM:
+            self.ivdm_metric = Metrics.IVDM(self.CD, self.discrete_cols, self.continuous_cols)
+        
+        test_df_weighted = test_df * np.append(weights, 1)
+        
+        if weighted:
+            return self.__fw_KIBLAlgorithm(test_df_weighted)
         if reduction:
-            if weighted:
-                self._fw_KIBLAlgorithm(train_df, test_df, reduction, weighted)
-            else:
-                self._ir_KIBLAlgorithm(train_df, test_df, reduction)
+            return self.__ir_KIBLAlgorithm(test_df_weighted, red_technique=reduction)
         else:
-            self.__train(df=train_df)
-            return self.__kIBLAlgorithm(test_df)
+            return self.__kIBLAlgorithm(test_df_weighted)
+
+    
+    def _compute_weights(self, weighted: WeightingTechnique):
+        if weighted == WeightingTechnique.RELIEF.value:
+            return self.relief()
+        elif weighted == WeightingTechnique.SFS.value:
+            return self.SFS()
+
+        return np.ones((self.CD.shape[1] - 1))
 
 
-    def _fw_KIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame, reduction: ReductionTechnique = ReductionTechnique.MCNN, weighted: WeightingTechnique = WeightingTechnique.RELIEF) -> list[int]:
+    def __fw_KIBLAlgorithm(self, test_df: pd.DataFrame) -> list[int]:
         """
         kIBL algorithm with feature weighting and reduction.
         
         Args:
-            train_df (pd.DataFrame): Training dataset.
             test_df (pd.DataFrame): Testing dataset.
-            reduction (ReductionTechnique, optional): Reduction technique to apply. Defaults to MCNN.
-            weighted (WeightingTechnique, optional): Weighting technique to apply. Defaults to RELIEF.
             
         Returns:
             list[int]: Predicted labels for the test dataset.
         """
-        self.__train(df=train_df, red_technique=reduction)
         
-        if weighted == WeightingTechnique.RELIEF:
-            weights = self.relief()
-        elif weighted == WeightingTechnique.SFS:
-            weights = self.SFS()
-        
-        return self.__kIBLAlgorithm(test_df, weights)
+        return self.__kIBLAlgorithm(test_df)
 
 
-    def _ir_KIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame, reduction: ReductionTechnique = ReductionTechnique.MCNN) -> list[int]:
+    def __ir_KIBLAlgorithm(self, test_df: pd.DataFrame, red_technique: ReductionTechnique) -> list[int]:
         """
         kIBL algorithm with instance reduction.
         
         Args:
-            train_df (pd.DataFrame): Training dataset.
             test_df (pd.DataFrame): Testing dataset.
             reduction (ReductionTechnique, optional): Reduction technique to apply. Defaults to MCNN.
             
         Returns:
             list[int]: Predicted labels for the test dataset.
         """
-        self.__train(df=train_df, red_technique=reduction)
+        if red_technique == ReductionTechnique.MCNN:
+            self.CD = Reductor.MCNN.reduce(self.CD)
+        elif red_technique == ReductionTechnique.ALL_KNN:
+            self.CD = Reductor.ALLKNN.reduce(data=self.CD, k=self.k, ivdm_metric=self.ivdm_metric)
+        elif red_technique == ReductionTechnique.ICF:
+            self.CD = Reductor.ICF.reduce(data=self.CD, k = self.k)
         
         return self.__kIBLAlgorithm(test_df)
     
     
-
-    def __kIBLAlgorithm(self, test_df: pd.DataFrame, weights: np.array = None) -> list[int]:
+    def __kIBLAlgorithm(self, test_df: pd.DataFrame) -> list[int]:
         """
         Core kIBL algorithm implementation.
         
         Args:
             test_df (pd.DataFrame): Testing dataset.
-            weights (np.array, optional): Feature weights. Defaults to None.
-        """    
-        
+        """ 
         predictions = []
         for _, instance in test_df.iterrows():
             instance = instance.to_numpy()
             
             # Compute similarity metric between instance and CD and obtain nearest neighbors.
-            nearest_outputs = self.return_nn(self.compute_distance(instance, weights))
+            nearest_outputs = self.return_nn(self.compute_distance(instance))
             # Decide output based on voting scheme
             output = self.voting_schema(nearest_outputs)
             
@@ -406,11 +392,3 @@ class KIBLearner:
             self.update_cd(instance, output, nearest_outputs)
         
         return predictions
-        
-    def predict(self, X: pd.DataFrame):
-        # Perhaps not used
-        pass
-
-
-class HyperParameterExplorer:
-    pass
