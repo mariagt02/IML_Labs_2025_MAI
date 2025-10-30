@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from typing import Literal
+from typing import Literal, Type
 from collections import Counter
 from metrics import Metrics
 from enum import Enum
@@ -15,6 +15,11 @@ class ReductionTechnique(Enum):
     ALL_KNN = "AllKNN"
     MCNN = "MCNN"
     ICF = "ICF"
+    
+    
+class WeightingTechnique(Enum):
+    RELIEF = "relief"
+    SFS = "SFS"
 
 class IBLHyperParameters:
     class SimMetrics(str, Enum):
@@ -45,9 +50,36 @@ class IBLHyperParameters:
                 results.append([member.value for member in obj if member not in exclude])
         
         return results
+
+    
+    @classmethod
+    def get_all_sim_metrics(cls) -> list[str]:
+        return [member.value for member in cls.SimMetrics]
+    
+    @classmethod
+    def get_all_voting_schemes(cls) -> list[str]:
+        return [member.value for member in cls.Voting]
+    
+    @classmethod
+    def get_all_retention_policies(cls) -> list[str]:
+        return [member.value for member in cls.Retention]
     
 
 class KIBLearner:
+    """
+    k-Instance-Based Learner (KIBLearner)
+
+    This class implements a flexible instance-based learning algorithm that supports multiple similarity metrics,
+    voting strategies, and retention mechanisms. It can also apply instance reduction techniques before training.
+    
+    Attributes:
+        sim_metric (IBLHyperParameters.SimMetrics): Similarity metric to used to compute distances between instances. Supported metrics include EUCLIDEAN, COSINE, IVDM, HEOM, and GWHSM. The latter two are not yet implemented.
+        k (int): Number of nearest neighbors to consider for classification.
+        voting (IBLHyperParameters.Voting): Voting scheme to determine the predicted class from nearest neighbors. Options are MODIFIED_PLURALITY and BORDA_COUNT.
+        retention (IBLHyperParameters.Retention): Retention policy for updating the content descriptor (CD) after each prediction. Options include NEVER_RETAIN, ALWAYS_RETAIN, DIFFERENT_CLASS, and DEGREE_OF_DISAGREEMENT.
+        threshold (float, optional): Defaults to 0.5. Threshold value used in the DEGREE_OF_DISAGREEMENT retention policy.
+        
+    """
     def __init__(self,
         sim_metric: IBLHyperParameters.SimMetrics,
         k: int,
@@ -68,8 +100,22 @@ class KIBLearner:
         self.continuous_cols = []
 
 
-    
     def __train(self, df: pd.DataFrame, red_technique: ReductionTechnique = None):
+        """
+        Train the kIBL learner by initializing the concept descriptor (CD) and determining column types.
+        If the specified reduction technique is provided, it applies instance reduction to the training data.
+        If the similarity metric is IVDM, it initializes the IVDM metric with the training data.
+        
+        Args:
+            df (pd.DataFrame): Training dataset.
+            red_technique (ReductionTechnique, optional): Reduction technique to apply. Defaults to None.
+            
+        Returns:
+            None
+            
+        Raises:
+            ValueError: If an unknown column type is encountered in the dataset.
+        """
         data = df.to_numpy()
 
         self.CD = None
@@ -79,7 +125,7 @@ class KIBLearner:
 
         if not red_technique:
             self.CD = data
-        elif red_technique == ReductionTechnique.MCNN: # cridarem les diferents funcions de train segons la reduction technique
+        elif red_technique == ReductionTechnique.MCNN:
             self.CD = Reductor.MCNN.reduce(data)
         elif red_technique == ReductionTechnique.ALL_KNN:
             self.CD = Reductor.ALLKNN.reduce(data=data, k=self.k)
@@ -99,12 +145,26 @@ class KIBLearner:
         if self.sim_metric == IBLHyperParameters.SimMetrics.IVDM:
             self.ivdm_metric = Metrics.IVDM(self.CD, self.discrete_cols, self.continuous_cols)
     
+    
     def compute_distance(self, instance: np.ndarray, weights = None) -> np.ndarray:
+        """
+        Compute the distance between a given instance and all instances in the concept descriptor.
+        If feature weights are provided, they are applied during distance computation. Otherwise, all features are treated equally.
+        
+        Args:
+            instance (np.ndarray): The instance to compute distances for.
+            weights (np.array, optional): Feature weights to apply during distance computation. Defaults to None.
+        
+        Returns:
+            np.ndarray: Array of sorted instances (from closest to farthest) between the query instance and all instances in the concept descriptor.
+        """
         cd = self.CD
+        
         if weights is not None:
             weights = np.append(weights, 1)
-            cd = cd*weights
-            instance = instance*weights
+            cd = cd * weights
+            instance = instance * weights
+        
         if self.sim_metric == IBLHyperParameters.SimMetrics.EUCLIDEAN:
             return Metrics.Base.euclidean_dist(cd, instance)
         elif self.sim_metric == IBLHyperParameters.SimMetrics.COSINE:
@@ -117,7 +177,16 @@ class KIBLearner:
             return self.__gwhsm() # TODO: complete
     
     
-    def return_nn(self, ordered_dist):
+    def return_nn(self, ordered_dist: np.ndarray) -> np.ndarray:
+        """
+        Retrieve the class of the k nearest neighbor outputs based on the ordered distances.
+        
+        Args:
+            ordered_dist (np.ndarray): Array of instances sorted by distance increasing to the query instance.
+
+        Returns:
+            np.ndarray: Array of the outputs (class labels) of the k nearest neighbors.
+        """
         return ordered_dist[:self.k, -1]
     
     def modified_plurality(self, nearest_outputs):
@@ -244,33 +313,85 @@ class KIBLearner:
         weights = [1 if i in idx else 0 for i in range(len(X_train[0]))]
         return weights
 
-    def KIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame): 
-        self.__train(df=train_df)
-        self.__kIBLAlgorithm(test_df)
-    
-    def fw_KIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame, reduction: ReductionTechnique = ReductionTechnique.MCNN, weighted: str = 'relief'): 
-        self.__train(df=train_df)
-        if weighted == 'relief':
-            weights = self.relief()
-        elif weighted == 'SFS':
-            weights = self.SFS()
-        self.__kIBLAlgorithm(test_df, weights)
 
-    def ir_KIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame, reduction: ReductionTechnique = ReductionTechnique.MCNN): 
+    def KIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame, reduction: ReductionTechnique = None, weighted: WeightingTechnique = None) -> list[int]:
+        """
+        Main kIBL algorithm wrapper function. It supports optional reduction and weighting techniques.
+        
+        Args:
+            train_df (pd.DataFrame): Training dataset.
+            test_df (pd.DataFrame): Testing dataset.
+            reduction (ReductionTechnique, optional): Reduction technique to apply. Defaults to None.
+            weighted (WeightingTechnique, optional): Weighting technique to apply. Defaults to None.
+        
+        Returns:
+            list[int]: Predicted labels for the test dataset.
+        """
+        if reduction:
+            if weighted:
+                self._fw_KIBLAlgorithm(train_df, test_df, reduction, weighted)
+            else:
+                self._ir_KIBLAlgorithm(train_df, test_df, reduction)
+        else:
+            self.__train(df=train_df)
+            return self.__kIBLAlgorithm(test_df)
+
+
+    def _fw_KIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame, reduction: ReductionTechnique = ReductionTechnique.MCNN, weighted: WeightingTechnique = WeightingTechnique.RELIEF) -> list[int]:
+        """
+        kIBL algorithm with feature weighting and reduction.
+        
+        Args:
+            train_df (pd.DataFrame): Training dataset.
+            test_df (pd.DataFrame): Testing dataset.
+            reduction (ReductionTechnique, optional): Reduction technique to apply. Defaults to MCNN.
+            weighted (WeightingTechnique, optional): Weighting technique to apply. Defaults to RELIEF.
+            
+        Returns:
+            list[int]: Predicted labels for the test dataset.
+        """
         self.__train(df=train_df, red_technique=reduction)
-        self.__kIBLAlgorithm(test_df)
+        
+        if weighted == WeightingTechnique.RELIEF:
+            weights = self.relief()
+        elif weighted == WeightingTechnique.SFS:
+            weights = self.SFS()
+        
+        return self.__kIBLAlgorithm(test_df, weights)
+
+
+    def _ir_KIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame, reduction: ReductionTechnique = ReductionTechnique.MCNN) -> list[int]:
+        """
+        kIBL algorithm with instance reduction.
+        
+        Args:
+            train_df (pd.DataFrame): Training dataset.
+            test_df (pd.DataFrame): Testing dataset.
+            reduction (ReductionTechnique, optional): Reduction technique to apply. Defaults to MCNN.
+            
+        Returns:
+            list[int]: Predicted labels for the test dataset.
+        """
+        self.__train(df=train_df, red_technique=reduction)
+        
+        return self.__kIBLAlgorithm(test_df)
     
     
 
     def __kIBLAlgorithm(self, test_df: pd.DataFrame, weights: np.array = None) -> list[int]:
-    # def kIBLAlgorithm(self, train_df: pd.DataFrame, test_df: pd.DataFrame) -> list[int]:
+        """
+        Core kIBL algorithm implementation.
         
+        Args:
+            test_df (pd.DataFrame): Testing dataset.
+            weights (np.array, optional): Feature weights. Defaults to None.
+        """    
         
         predictions = []
         for _, instance in test_df.iterrows():
             instance = instance.to_numpy()
-            # Compute similarity metric -> important no passar ultima columna (o la de la classe).
-            # Obtain k-nearest neighbors
+            
+            # Compute similarity metric between instance and CD and obtain nearest neighbors.
             nearest_outputs = self.return_nn(self.compute_distance(instance, weights))
             # Decide output based on voting scheme
             output = self.voting_schema(nearest_outputs)

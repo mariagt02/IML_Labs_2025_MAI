@@ -32,6 +32,9 @@ pip install -r requirements.txt
     ```
     The results are stored in the specified output path, including text files and visualizations of the significance matrix. The default path where results are stored is `results/stat_test/<test_name>/`.
 
+- `k_ibl.py`: This is one of the core files of the project. It implements the `KIBLearner` class, which encapsulates the k-Instance Based Learning algorithm with feature weighting, voting schemes and retention policies. It also supports different distance metrics and instance reduction techniques.
+
+- `experiments.py`: This script is responsible for running the experiments on the selected datasets with various hyperparameter configurations. It allows users to specify datasets, similarity metrics, voting schemes, and retention policies through command-line arguments. The results of the experiments are saved in JSON format for further analysis.
 
 - `pipeline.sh`: A shell script to automate the execution of the different parts of the project, including data preprocessing, model training, evaluation, and statistical analysis. It calls the relevant Python scripts with appropriate arguments based on the analysis that we have carried out to obtain the results shown in the report. It can be executed from the command using:
     - `bash pipeline.sh`

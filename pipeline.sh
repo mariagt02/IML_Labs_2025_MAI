@@ -27,9 +27,17 @@ echo "Introduction to Machine Learning - Project 1: k-IBL Pipeline"
 # 1. Data Preprocessing
 echo "Starting Data Preprocessing..."
 echo "NOT IMPLEMENTED YET"
+
 # 2. Model Training
 echo "Starting Model Training..."
-echo "NOT IMPLEMENTED YET"
+echo "Running experiments for the two main datasets..."
+python experiments.py --datasets credit-a pen-based --similarity_metrics all --voting_schemes all --retention all
+
+echo "Running experiments for the two extra datasets..."
+python experiments.py --datasets vowel grid --similarity_metrics all --voting_schemes all --retention all
+
+
+
 # 3. Statistical Tests for Model Selection
 echo "Starting Statistical Tests for Model Selection..."
 

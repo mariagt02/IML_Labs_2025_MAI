@@ -10,7 +10,8 @@ class GlobalConfig:
     """
     DEFAULT_RESULTS_PATH = os.path.join("res", "k_ibl_hyperparameters") # Path where the k_ibl_hyperparameters results are stored
     DEFAULT_STATS_OUTPUT_PATH = os.path.join("res", "stat_tests") # Path where the Friedman-Nemenyi test results will be saved
-
+    DEFAULT_DATASET_DIR = "data" # Directory where raw datasets are stored
+    DEFAULT_PREPROCESSED_DATASET_DIR = "preprocessed" # Directory where preprocessed datasets are stored
 
 
 
