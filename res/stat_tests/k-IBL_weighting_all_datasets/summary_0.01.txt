@@ -1,0 +1,2 @@
+Friedman statistic: 3.887096774193607, p-value: 0.1431949361593144
+Can we reject the null hypothesis (all algorithms are equivalent) at alpha=0.01? No
