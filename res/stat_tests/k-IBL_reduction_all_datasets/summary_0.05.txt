@@ -1,0 +1,12 @@
+Friedman statistic: 47.37795275590545, p-value: 2.888211904352475e-10
+Can we reject the null hypothesis (all algorithms are equivalent) at alpha=0.05? Yes
+Null hypothesis has been rejected. This means that there is a significant difference between at least two algorithms.
+To find out which algorithms differ significantly, we perform the Nemenyi post-hoc test.
+euc_mp_3_ar_None      1.6125
+euc_mp_3_ar_AllKNN    2.1375
+euc_mp_3_ar_ICF       2.8250
+euc_mp_3_ar_MCNN      3.4250
+dtype: float64Number of significant pairwise differences found: 3
+	Significant difference between euc_mp_3_ar_AllKNN and euc_mp_3_ar_MCNN (p-value: 0.0000)
+	Significant difference between euc_mp_3_ar_MCNN and euc_mp_3_ar_None (p-value: 0.0000)
+	Significant difference between euc_mp_3_ar_ICF and euc_mp_3_ar_None (p-value: 0.0002)

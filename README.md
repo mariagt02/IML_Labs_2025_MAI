@@ -34,10 +34,10 @@ pip install -r requirements.txt
 
 - `k_ibl.py`: This is one of the core files of the project. It implements the `KIBLearner` class, which encapsulates the k-Instance Based Learning algorithm with feature weighting, voting schemes and retention policies. It also supports different distance metrics and instance reduction techniques.
 
-- `experiments.py`: This script is responsible for running the experiments on the selected datasets with various hyperparameter configurations. It allows users to specify datasets, similarity metrics, voting schemes, and retention policies through command-line arguments. The results of the experiments are saved in JSON format for further analysis.  It allows for an option to skip the experiments for a dataset if the results already exist. It supports the option to preform instance reduction or feature weighting on hte k-IBL algorithm. `experiments.py -h`:
+- `experiments.py`: This script is responsible for running the experiments on the selected datasets with various hyperparameter configurations. It allows users to specify datasets, similarity metrics, voting schemes, and retention policies through command-line arguments. The results of the experiments are saved in JSON format for further analysis.  It allows for an option to skip the experiments for a dataset if the results already exist. It supports the option to preform instance reduction or feature weighting on the k-IBL algorithm. `experiments.py -h`:
   ```code
     usage: experiments.py [-h] [--dataset_dir DATASET_DIR] [--datasets DATASETS [DATASETS ...]] [--ks KS [KS ...]] [--retention {nr,ar,dc,dd,all} [{nr,ar,dc,dd,all} ...]] [--similarity_metrics {euc,cos,ivdm,all} [{euc,cos,ivdm,all} ...]] [--voting_schemes {mp,bc,all} [{mp,bc,all} ...]]
-                      [--weighting {relief,SFS,all,None} [{relief,SFS,all,None} ...]] [--output_dir OUTPUT_DIR] [-o]
+                      [--weighting {relief,SFS,all,None} [{relief,SFS,all,None} ...]] [--reduction_technique {AllKNN,MCNN,ICF,all,None} [{AllKNN,MCNN,ICF,all,None} ...]] [--output_dir OUTPUT_DIR] [-o]
 
     Run K-IBL experiments on specified datasets with various hyperparameter combinations.
 
@@ -56,6 +56,8 @@ pip install -r requirements.txt
                             List of voting schemes to use. Use 'all' to include all available schemes.
     --weighting {relief,SFS,all,None} [{relief,SFS,all,None} ...]
                             List of weighting techniques to use. Use None for no weighting.
+    --reduction_technique {AllKNN,MCNN,ICF,all,None} [{AllKNN,MCNN,ICF,all,None} ...]
+                            List of reduction techniques to use. Use 'all' to include all available techniques.
     --output_dir OUTPUT_DIR
                             Directory where output files will be saved.
     -o, --overwrite       If set, existing output files will be overwritten. Otherwise, datasets for which results already exist will be skipped.

@@ -366,7 +366,7 @@ class KIBLearner:
         if red_technique == ReductionTechnique.MCNN:
             self.CD = Reductor.MCNN.reduce(self.CD)
         elif red_technique == ReductionTechnique.ALL_KNN:
-            self.CD = Reductor.ALLKNN.reduce(data=self.CD, k=self.k, ivdm_metric=self.ivdm_metric)
+            self.CD = Reductor.ALLKNN.reduce(data=self.CD, k=self.k, ivdm_metric=self.ivdm_metric if hasattr(self, 'ivdm_metric') else None, metric=self.sim_metric)
         elif red_technique == ReductionTechnique.ICF:
             self.CD = Reductor.ICF.reduce(data=self.CD, k = self.k)
         

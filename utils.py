@@ -34,6 +34,7 @@ class GlobalConfig:
     DEFAULT_HYPERPARAM_RESULTS_PATH = os.path.join(DEFAULT_RESULTS_PATH, "k_ibl_hyperparameters") # Path where the k_ibl_hyperparameters results are stored
     DEFAULT_SVM_RESULTS_PATH = os.path.join(DEFAULT_RESULTS_PATH, "svm")
     DEFAULT_WEIGHTED_RESULTS_PATH = os.path.join(DEFAULT_RESULTS_PATH, "weighted")
+    DEFAULT_REDUCTION_RESULTS_PATH = os.path.join(DEFAULT_RESULTS_PATH, "reduction")
     DEFAULT_STATS_OUTPUT_PATH = os.path.join(DEFAULT_RESULTS_PATH, "stat_tests") # Path where the Friedman-Nemenyi test results will be saved
     DEFAULT_COMPLETE_VISUALIZATIONS_PATH = os.path.join(DEFAULT_RESULTS_PATH, "complete_visualizations") # Path where the complete dataset visualizations will be saved
     DEFAULT_REDUCTION_VISUALIZATIONS_PATH = os.path.join(DEFAULT_RESULTS_PATH, "reduction_visualizations") # Path where the reduction technique visualizations will be saved

@@ -48,11 +48,12 @@ python stats.py --alpha 0.1 --datasets all --test_name k-IBL_hyperparameters_all
 # 4. Weighting Techniques
 echo "Starting weighting techniques experiments..."
 echo "Running weighting techniques experiments for the two main datasets..."
-python experiments.py --datasets credit-a pen-based --similarity_metrics euc --voting_schemes bc --retention ar --weighting all --ks 5
+python experiments.py --datasets credit-a pen-based --similarity_metrics euc --voting_schemes mp --retention ar --weighting all --ks 3
 
 echo "Running weighting techniques experiments for the two extra datasets..."
-python experiments.py --datasets vowel grid --similarity_metrics euc --voting_schemes bc --retention ar --weighting all --ks 5
+python experiments.py --datasets vowel grid --similarity_metrics euc --voting_schemes mp --retention ar --weighting all --ks 3
 
+# 5. Statistical Tests for Weighting Techniques
 echo "Statistical tests for weighting techniques..."
 python stats.py --alpha 0.1 --datasets credit-a pen-based --test_name k-IBL_weighting_2_datasets --base_dir "res/weighted"
 python stats.py --alpha 0.05 --datasets credit-a pen-based --test_name k-IBL_weighting_2_datasets --base_dir "res/weighted"
@@ -62,7 +63,26 @@ python stats.py --alpha 0.05 --datasets all --test_name k-IBL_weighting_all_data
 python stats.py --alpha 0.01 --datasets all --test_name k-IBL_weighting_all_datasets --base_dir "res/weighted"
 
 
-# 4. SVM
+# 6. Reduction Techniques
+echo "Starting reduction techniques experiments..."
+
+echo "Running reduction techniques experiments for the two main datasets..."
+python experiments.py --datasets credit-a pen-based --similarity_metrics euc --voting_schemes mp --retention ar --reduction_technique all --ks 3
+
+echo "Running reduction techniques experiments for the two extra datasets..."
+python experiments.py --datasets vowel grid --similarity_metrics euc --voting_schemes mp --retention ar --reduction_technique all --ks 3
+
+
+# 7. Statistical Tests for Reduction Techniques
+echo "Starting statistical tests for reduction techniques..."
+python stats.py --alpha 0.1 --datasets credit-a pen-based --test_name k-IBL_reduction_2_datasets --base_dir "res/reduction"
+python stats.py --alpha 0.05 --datasets credit-a pen-based --test_name k-IBL_reduction_2_datasets --base_dir "res/reduction"
+python stats.py --alpha 0.01 --datasets credit-a pen-based --test_name k-IBL_reduction_2_datasets --base_dir "res/reduction"
+python stats.py --alpha 0.1 --datasets all --test_name k-IBL_reduction_all_datasets --base_dir "res/reduction"
+python stats.py --alpha 0.05 --datasets all --test_name k-IBL_reduction_all_datasets --base_dir "res/reduction"
+python stats.py --alpha 0.01 --datasets all --test_name k-IBL_reduction_all_datasets --base_dir "res/reduction"
+
+# 6. SVM
 echo "Starting SVM experiments..."
 echo "Running SVM experiments for the two main datasets..."
 python SVM.py --datasets credit-a pen-based -s                                                                                                                                                                                            
@@ -70,7 +90,7 @@ python SVM.py --datasets credit-a pen-based -s
 echo "Running SVM experiments for the two extra datasets..."
 python SVM.py --datasets vowel grid -s
 
-# 5. Statistical Tests for SVM
+# 7. Statistical Tests for SVM
 echo "Starting statistical tests for svm..."
 python stats.py --alpha 0.1 --datasets credit-a pen-based --test_name SVM_2_datasets --base_dir "res/svm"
 python stats.py --alpha 0.1 --datasets all --test_name SVM_all_datasets --base_dir "res/svm"
