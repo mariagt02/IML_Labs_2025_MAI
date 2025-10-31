@@ -8,9 +8,9 @@ euc_bc_7_dc     25.525
 euc_mp_3_dd     26.200
 euc_mp_3_nr     26.850
                  ...  
-ivdm_mp_7_nr    44.950
-ivdm_bc_3_nr    50.975
+ivdm_mp_7_dd    44.950
 ivdm_bc_3_ar    50.975
+ivdm_bc_3_nr    50.975
 ivdm_bc_3_dc    50.975
 ivdm_bc_3_dd    50.975
 Length: 72, dtype: float64Number of significant pairwise differences found: 4
