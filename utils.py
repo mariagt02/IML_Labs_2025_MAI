@@ -1,6 +1,28 @@
 import platform
 import re
 import os
+from typing import Any
+import json
+
+
+def calculate_accuracy(y_pred: list[Any], y_true: list[Any], percentage: bool = True) -> tuple[int, float]:
+    correct = 0
+    for pred, true in zip(y_pred, y_true):
+        if pred == true: correct += 1
+    
+    ratio = correct / len(y_true)
+    
+    return correct, round(ratio * 100, 4) if percentage else ratio
+
+
+def pretty_json_format(data: dict):
+    """
+    Formats a JSON-serializable object into a pretty-printed JSON string,
+    condensing arrays of numbers into single-line representations for better readability.
+    """
+    json_str = json.dumps(data, indent=3)
+    json_str = re.sub(r"\[\s+([\d.,\s]+?)\s+\]", lambda m: "[" + " ".join(m.group(1).split()) + "]", json_str)
+    return json_str
 
 
 class GlobalConfig:

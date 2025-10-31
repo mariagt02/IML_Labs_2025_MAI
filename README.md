@@ -87,6 +87,26 @@ pip install -r requirements.txt
 
 - `dataset.py`: Contains the `DatasetLoader` class, which is responsible for loading the different files of a dataset. It also contains the `DatasetVisualizer` class, which provides methods to visualize datasets in 2D and 3D (complete or reduced) using dimensionality reduction techniques like PCA and t-SNE. If executed as a script, it visualizes all the complete datasets in 2D using PCA and t-SNE.
 
+- `SVM.py`: Implements an Support Vector Machine (SVM) classifier using scikit-learn. It tests different kernels and hyperparameters on the selected datasets. The results are saved in JSON format for further analysis. It allows the experiments to be carried out in parallel for faster execution. `SVM.py -h`:
+  ```code
+  usage: SVM.py [-h] [--dataset_dir DATASET_DIR] [--datasets DATASETS [DATASETS ...]] [--output_dir OUTPUT_DIR] [-o] [-s] [-w WORKERS]
+
+    SVM Experiments
+
+    options:
+    -h, --help            show this help message and exit
+    --dataset_dir DATASET_DIR
+                            Directory where preprocessed datasets are stored.
+    --datasets DATASETS [DATASETS ...]
+                            List of dataset names to run experiments on. Use 'all' to run on all available datasets.
+    --output_dir OUTPUT_DIR
+                            Directory where output files will be saved.
+    -o, --overwrite       If set, existing output files will be overwritten. Otherwise, datasets for which results already exist will be skipped.
+    -s, --summary         If set, a summary of the results will be printed at the end.
+    -w WORKERS, --workers WORKERS
+                            Number of parallel worker processes (default: number of CPU cores).
+  ```
+
 - `pipeline.sh`: A shell script to automate the execution of the different parts of the project, including data preprocessing, model training, evaluation, and statistical analysis. It calls the relevant Python scripts with appropriate arguments based on the analysis that we have carried out to obtain the results shown in the report. It can be executed from the command using:
     - `bash pipeline.sh`
     - `./pipeline.sh` (after giving execute permissions with `chmod u+x pipeline.sh`)

@@ -1,24 +1,28 @@
 import pandas as pd
 from sklearn import svm
 from dataset import DatasetLoader
-from typing import Any, Dict, List, Tuple
+from typing import Any
 import json
 import time
-import re
 import itertools
-from utils import GlobalConfig
+from utils import GlobalConfig, TerminalColor, calculate_accuracy, pretty_json_format
 import os
+import argparse
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
-def calculate_accuracy(y_pred: List[Any], y_true: List[Any], percentage: bool = True) -> Tuple[int, float]:
-    correct = 0
-    for pred, true in zip(y_pred, y_true):
-        if pred == true: correct += 1
-    
-    ratio = correct / len(y_true)
-    
-    return correct, round(ratio * 100, 4) if percentage else ratio
 
-def format_json_key(kernel_name: str, params: Dict[str, Any], c: float) -> str:
+def format_test_name(kernel_name: str, params: dict[str, Any], c: float) -> str:
+    """
+    Formats a test name for SVM experiments based on kernel, parameters, and C value.
+    
+    Args:
+        kernel_name (str): The name of the SVM kernel (e.g., 'linear', 'rbf').
+        params (dict[str, Any]): A dictionary of SVM parameters.
+        c (float): The regularization parameter C.
+    
+    Returns:
+        str: A formatted test name string.
+    """
     param_list = []
     # Format parameters into a string for the key
     for k, v in params.items():
@@ -38,12 +42,28 @@ def format_json_key(kernel_name: str, params: Dict[str, Any], c: float) -> str:
 def svmAlgorithm(
     df_train: pd.DataFrame, 
     df_test: pd.DataFrame, 
-    fold_index: int, 
     kernel: str, 
-    svc_params: Dict[str, Any],
+    svc_params: dict[str, Any],
     c: float = 1.0
-) -> Tuple[float, List[Any], List[Any], float]:
+) -> tuple[float, list[Any], list[Any], float]:
+    """
+    Implements the SVM algorithm using scikit-learn's SVC.
     
+    Args:
+        df_train (pd.DataFrame): The training dataset.
+        df_test (pd.DataFrame): The testing dataset.
+        kernel (str): The SVM kernel to use (e.g., 'linear', 'rbf').
+        svc_params (dict[str, Any]): Additional parameters for the SVC.
+        c (float): The regularization parameter C.
+    
+    Returns:
+        tuple[float, list[Any], list[Any], float]: A tuple containing:
+            - accuracy_ratio (float): The accuracy as a ratio (0 to 1).
+            - y_true (list[Any]): The true labels from the test set.
+            - y_pred (list[Any]): The predicted labels from the SVM model.
+            - fold_time (float): The time taken to train and test the model.
+    """
+
     X_train = df_train.iloc[:, :-1]
     y_train = df_train.iloc[:, -1].tolist() 
     
@@ -64,113 +84,183 @@ def svmAlgorithm(
     end_time = time.time()
     fold_time = end_time - start_time
 
-    correct_count, accuracy_percentage = calculate_accuracy(y_pred=y_pred, y_true=y_test, percentage=True)
+    correct_count, _ = calculate_accuracy(y_pred=y_pred, y_true=y_test, percentage=True)
     accuracy_ratio = correct_count / len(y_test)
-    
-    # Print console output
-    param_str = ", ".join(f"{k}={v}" for k, v in svc_params.items())
-    label = f"{kernel.upper()}: ({param_str})" if param_str else f"{kernel.upper()}"
-    print(f"   Fold {fold_index} [{label}]: Accuracy = {accuracy_percentage:.4f}% ({correct_count}/{len(y_test)}) | Time: {fold_time:.4f}s")
-    
     return accuracy_ratio, y_test, y_pred, fold_time
 
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="SVM Experiments")
+    
+    parser.add_argument(
+        "--dataset_dir",
+        type=str,
+        default=GlobalConfig.DEFAULT_PREPROCESSED_DATASET_DIR,
+        help="Directory where preprocessed datasets are stored."
+    )
+    
+    parser.add_argument(
+        "--datasets",
+        nargs="+",
+        default=["all"],
+        help="List of dataset names to run experiments on. Use 'all' to run on all available datasets."
+    )
+    
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default=GlobalConfig.DEFAULT_SVM_RESULTS_PATH,
+        help="Directory where output files will be saved."
+    )
+    
+    parser.add_argument(
+        "-o", "--overwrite",
+        action="store_true",
+        help="If set, existing output files will be overwritten. Otherwise, datasets for which results already exist will be skipped."
+    )
+    
+    parser.add_argument(
+        "-s", "--summary",
+        action="store_true",
+        help="If set, a summary of the results will be printed at the end."
+    )
+    
+    parser.add_argument(
+        "-w", "--workers",
+        type=int,
+        default=os.cpu_count(),
+        help="Number of parallel worker processes (default: number of CPU cores)."
+    )
+
+    parsed_args = parser.parse_args()
+    
+    if "all" in parsed_args.datasets and len(parsed_args.datasets) > 1:
+        parser.error("If 'all' is specified in datasets, no other dataset names can be provided.")
+    
+    os.makedirs(parsed_args.output_dir, exist_ok=True)
+
+    return parsed_args
+
+
+
+def run_single_test(dataset: str, kernel_name: str, params: dict, c: float, dataset_dir: str) -> tuple[str, str, dict]:
+    dataset_loader = DatasetLoader(dataset_name=dataset, dataset_dir=dataset_dir)
+    dataset_loader.load()
+    
+    test_name = format_test_name(kernel_name, params, c)
+    
+    fold_results_for_kernel = {}
+    fold_accuracy_ratios = []
+    
+    experiment_start_time = time.time()
+    for i, (df_train, df_test) in enumerate(dataset_loader):
+        accuracy_ratio, y_true, y_pred, fold_time = svmAlgorithm(
+            df_train, 
+            df_test,
+            kernel=kernel_name,
+            svc_params=params,
+            c=c
+        )
+        fold_accuracy_ratios.append(accuracy_ratio)
+        fold_results_for_kernel[str(i)] = {
+            "y_true": y_true,
+            "y_pred": y_pred,
+            "fold_accuracy": round(accuracy_ratio * 100, 4),
+            "fold_time": round(fold_time, 6)
+        }
+    
+    avg_accuracy = round(sum(fold_accuracy_ratios) / len(fold_accuracy_ratios) * 100, 4)
+    fold_results_for_kernel["total_accuracy"] = avg_accuracy
+    fold_results_for_kernel["total_time"] = time.time() - experiment_start_time
+    
+    return dataset, test_name, fold_results_for_kernel
+
+
 if __name__ == "__main__":
-        
+    
+    args = parse_args()
+    
+    if args.datasets == ["all"]:
+        dataset_names = [dataset_name for dataset_name in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, dataset_name))]
+    else:
+        dataset_names = args.datasets
+    
+    
+    
     kernel_configs = [
-        ("linear", {}),                                                     # Linear: ⟨x,x′⟩
+        ("linear", {}),
         
-        ("poly", {"degree": 1, "coef0": 0.0, "gamma": 1.0}),  
-        ("poly", {"degree": 1, "coef0": 0.0, "gamma": "scale"}),            # Polynomial: (γ⟨x,x′⟩+r)^d
+        ("poly", {"degree": 1, "coef0": 0.0, "gamma": "scale"}),
         ("poly", {"degree": 1, "coef0": 0.0, "gamma": "auto"}),
-        ("poly", {"degree": 3, "coef0": 0.0, "gamma": "scale"}),            
+        ("poly", {"degree": 3, "coef0": 0.0, "gamma": "scale"}),
         ("poly", {"degree": 3, "coef0": 0.0, "gamma": "auto"}),
         ("poly", {"degree": 5, "coef0": 0.0, "gamma": "scale"}),
         ("poly", {"degree": 5, "coef0": 0.0, "gamma": "auto"}),
-        
-        ("poly", {"degree": 1, "coef0": 1.0, "gamma": "scale"}),            # Polynomial: (γ⟨x,x′⟩+r)^d
+
+        ("poly", {"degree": 1, "coef0": 1.0, "gamma": "scale"}),
         ("poly", {"degree": 1, "coef0": 1.0, "gamma": "auto"}),
-        ("poly", {"degree": 3, "coef0": 1.0, "gamma": "scale"}),            
+        ("poly", {"degree": 3, "coef0": 1.0, "gamma": "scale"}),
         ("poly", {"degree": 3, "coef0": 1.0, "gamma": "auto"}),
         ("poly", {"degree": 5, "coef0": 1.0, "gamma": "scale"}),
         ("poly", {"degree": 5, "coef0": 1.0, "gamma": "auto"}),
-        
-        ("rbf", {"gamma": 'scale'}),                                        # Rbf: exp(−γ‖x−x′‖^2)
-        ("rbf", {"gamma": 'auto'}),                     
-        
-        ("sigmoid", {"coef0": 0.0, "gamma": 'scale'}),                      # Sigmoid: tanh(γ⟨x,x′⟩+r)
-        ("sigmoid", {"coef0": 0.0, "gamma": 'auto'}),   
-        ("sigmoid", {"coef0": 1.0, "gamma": 'scale'}),  
-        ("sigmoid", {"coef0": 1.0, "gamma": 'auto'}),   
+
+        ("rbf", {"gamma": "scale"}),
+        ("rbf", {"gamma": "auto"}),
+
+        ("sigmoid", {"coef0": 0.0, "gamma": "scale"}),
+        ("sigmoid", {"coef0": 0.0, "gamma": "auto"}),
+        ("sigmoid", {"coef0": 1.0, "gamma": "scale"}),
+        ("sigmoid", {"coef0": 1.0, "gamma": "auto"}),
     ]
     
-    Cs = [0.1, 1.0, 10.0] # inversely proportional
-    
+    Cs = [0.1, 1.0, 10.0]
     param_combs = list(itertools.product(*[kernel_configs, Cs]))
-    
 
-    dataset_names = ['grid','vowel']
+    
+    num_tests = len(param_combs) * len(dataset_names)
+    
     all_kernel_results = {} 
 
+    tasks = []
     for dataset in dataset_names:
-        print(f"\n================ DATASET: {dataset} ================")
-        
-        dataset_loader = DatasetLoader(dataset_name=dataset)
-        dataset_loader.load()
-        
-        full_dataset_results = {}
-        
-        # Loop through each kernel configuration
-        experiment_start_time = time.time()
+        output_path = os.path.join(args.output_dir, f"results_{dataset}.json")
+        if os.path.exists(output_path) and not args.overwrite:
+            print(f"{TerminalColor.colorize('Skipping', color='red', bold=True)} dataset {TerminalColor.colorize(dataset, color='yellow')}")
+            continue
+
         for (kernel_name, params), c in param_combs:
-            print(f"\n--- Evaluating Kernel: {kernel_name.upper()} (Params: {params}) ---")
-            
-            fold_results_for_kernel = {} # Stores results for all folds for the current kernel
-            fold_accuracy_ratios = []
-            
-            # Loop through each cross-validation fold
-            for i, (df_train, df_test) in enumerate(dataset_loader):
-                accuracy_ratio, y_true, y_pred, fold_time = svmAlgorithm(
-                    df_train, 
-                    df_test, 
-                    i + 1, # Fold index
-                    kernel=kernel_name,
-                    svc_params=params,
-                    c=c
-                )
-                
-                fold_accuracy_ratios.append(accuracy_ratio)
-                
-                fold_results_for_kernel[str(i)] = {
-                    "y_true": y_true,
-                    "y_pred": y_pred,
-                    "fold_accuracy": round(accuracy_ratio * 100, 4), 
-                    "fold_time": round(fold_time, 6)
-                }
-            
-            if fold_accuracy_ratios:
-                # Calculate and print the average accuracy for the kernel
-                avg_accuracy_ratio = sum(fold_accuracy_ratios) / len(fold_accuracy_ratios)
-                avg_accuracy_percentage = round(avg_accuracy_ratio * 100, 4)
-                print(f"\n--- Average {kernel_name.upper()} Accuracy: {avg_accuracy_percentage:.4f}% ---")
-                
-                # Format the key and store the detailed fold results in the final structure
-                json_key = format_json_key(kernel_name, params, c)
-                full_dataset_results[json_key] = fold_results_for_kernel
-                full_dataset_results[json_key]["total_accuracy"] = avg_accuracy_percentage
-                full_dataset_results[json_key]["total_time"] = time.time() - experiment_start_time
-                
-                # Store average accuracy for the final console summary
-                all_kernel_results[dataset] = all_kernel_results.get(dataset, {})
-                all_kernel_results[dataset][kernel_name] = avg_accuracy_percentage
+            tasks.append((dataset, kernel_name, params, c))
 
-        with open(os.path.join(GlobalConfig.DEFAULT_SVM_RESULTS_PATH, f"results_{dataset}.json"), "w+") as f:
-            json_str = json.dumps(full_dataset_results, indent=3)
-            json_str = re.sub(r"\[\s+([\d.,\s]+?)\s+\]", lambda m: "[" + " ".join(m.group(1).split()) + "]", json_str)
-            f.write(json_str)
-            
-    print("\n================ FINAL RESULTS ================")
-    for dataset, results in all_kernel_results.items():
-        print(f"Dataset: {dataset}")
-        for kernel, acc in results.items():
-            print(f"  {kernel.upper()} Average Accuracy: {acc:.4f}%")
+    print(f"{TerminalColor.colorize('Running', color='green', bold=True)} {len(tasks)} tests in parallel using {TerminalColor.colorize(str(args.workers), color='yellow')} workers...")
 
+    all_kernel_results = {}
+    full_dataset_results = {d: {} for d in dataset_names}
+
+    with ProcessPoolExecutor(max_workers=args.workers) as executor:
+        futures = {
+            executor.submit(run_single_test, dataset, kernel, params, c, args.dataset_dir): (dataset, kernel)
+            for (dataset, kernel, params, c) in tasks
+        }
+
+        for test_num, future in enumerate(as_completed(futures), start=1):
+            try:
+                dataset, test_name, fold_results = future.result()
+                print(f"Test [{test_num} / {len(tasks)}]. Dataset: {TerminalColor.colorize(dataset, color='yellow')}. Hyperparameters: {TerminalColor.colorize(test_name, color='orange', bold=True)} done. Total accuracy: {TerminalColor.colorize(fold_results['total_accuracy'], color='green', bold=True)}%")
+                full_dataset_results[dataset][test_name] = fold_results
+            except Exception as e:
+                print(f"{TerminalColor.colorize('Error', color='red', bold=True)} in one test: {e}")
+
+    for dataset, results in full_dataset_results.items():
+        if not results: continue
+        
+        output_path = os.path.join(args.output_dir, f"results_{dataset}.json")
+        with open(output_path, "w+") as f:
+            f.write(pretty_json_format(results))
+
+    # if args.summary:
+    #     for dataset, results in full_dataset_results.items():
+    #         output_summary_path = os.path.join(args.output_dir, f"{dataset}_summary.txt")
+    #         with open(output_summary_path, "w+") as f:
+    #             f.write(f"Dataset: {dataset}\n")
+    #             # Write the average accuracy of the dataset in the file

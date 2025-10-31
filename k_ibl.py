@@ -44,7 +44,7 @@ class IBLHyperParameters:
         DEGREE_OF_DISAGREEMENT = "dd"
     
     @classmethod
-    def get_all_values(cls, exclude) -> list[list[str]]:
+    def get_all_values(cls, exclude: list[str] = []) -> list[list[str]]:
         # We exclude the distance metrics that are not implemented
         results = []
         for _, obj in cls.__dict__.items():

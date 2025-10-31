@@ -44,25 +44,34 @@ echo "Starting statistical tests for model selection..."
 python stats.py --alpha 0.1 --datasets credit-a pen-based --test_name k-IBL_hyperparameters_2_datasets
 python stats.py --alpha 0.1 --datasets all --test_name k-IBL_hyperparameters_all_datasets
 
-# 4. Statistical Tests for SVM
+
+# 4. SVM
+echo "Starting SVM experiments..."
+echo "Running SVM experiments for the two main datasets..."
+python SVM.py --datasets credit-a pen-based -s                                                                                                                                                                                            
+
+echo "Running SVM experiments for the two extra datasets..."
+python SVM.py --datasets vowel grid -s
+
+# 5. Statistical Tests for SVM
 echo "Starting statistical tests for svm..."
-python stats.py --alpha 0.1 --datasets credit-a pen-based --test_name SVM_2_datasets --base_dir "res\svm"
-python stats.py --alpha 0.1 --datasets all --test_name SVM_all_datasets --base_dir "res\svm"
+python stats.py --alpha 0.1 --datasets credit-a pen-based --test_name SVM_2_datasets --base_dir "res/svm"
+python stats.py --alpha 0.1 --datasets all --test_name SVM_all_datasets --base_dir "res/svm"
 
 
 # Visualizations for the reduction techniques on the different datasets
 echo "Starting dimensionality reduction visualizations..."
-python reduction.py --datasets credit-a pen-based vowel grid --mcnn --pca
-python reduction.py --datasets credit-a pen-based vowel grid --mcnn --tsne
-python reduction.py --datasets credit-a pen-based vowel grid --icf -k 3 --pca
-python reduction.py --datasets credit-a pen-based vowel grid --icf -k 5 --pca
-python reduction.py --datasets credit-a pen-based vowel grid --icf -k 7 --pca
-python reduction.py --datasets credit-a pen-based vowel grid --icf -k 3 --tsne
-python reduction.py --datasets credit-a pen-based vowel grid --icf -k 5 --tsne
-python reduction.py --datasets credit-a pen-based vowel grid --icf -k 7 --tsne
-python reduction.py --datasets credit-a pen-based vowel grid --allknn --metric cos euc -k 3 --pca
-python reduction.py --datasets credit-a pen-based vowel grid --allknn --metric cos euc -k 5 --pca
-python reduction.py --datasets credit-a pen-based vowel grid --allknn --metric cos euc -k 7 --pca
-python reduction.py --datasets credit-a pen-based vowel grid --allknn --metric cos euc -k 3 --tsne
-python reduction.py --datasets credit-a pen-based vowel grid --allknn --metric cos euc -k 5 --tsne
-python reduction.py --datasets credit-a pen-based vowel grid --allknn --metric cos euc -k 7 --tsne
+# python reduction.py --datasets credit-a pen-based vowel grid --mcnn --pca
+# python reduction.py --datasets credit-a pen-based vowel grid --mcnn --tsne
+# python reduction.py --datasets credit-a pen-based vowel grid --icf -k 3 --pca
+# python reduction.py --datasets credit-a pen-based vowel grid --icf -k 5 --pca
+# python reduction.py --datasets credit-a pen-based vowel grid --icf -k 7 --pca
+# python reduction.py --datasets credit-a pen-based vowel grid --icf -k 3 --tsne
+# python reduction.py --datasets credit-a pen-based vowel grid --icf -k 5 --tsne
+# python reduction.py --datasets credit-a pen-based vowel grid --icf -k 7 --tsne
+# python reduction.py --datasets credit-a pen-based vowel grid --allknn --metric cos euc -k 3 --pca
+# python reduction.py --datasets credit-a pen-based vowel grid --allknn --metric cos euc -k 5 --pca
+# python reduction.py --datasets credit-a pen-based vowel grid --allknn --metric cos euc -k 7 --pca
+# python reduction.py --datasets credit-a pen-based vowel grid --allknn --metric cos euc -k 3 --tsne
+# python reduction.py --datasets credit-a pen-based vowel grid --allknn --metric cos euc -k 5 --tsne
+# python reduction.py --datasets credit-a pen-based vowel grid --allknn --metric cos euc -k 7 --tsne

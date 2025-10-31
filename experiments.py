@@ -5,21 +5,13 @@ import json
 import itertools
 from sklearn.neighbors import KNeighborsClassifier
 from dataset import DatasetLoader
-from utils import TerminalColor
+from utils import TerminalColor, calculate_accuracy, pretty_json_format
 import time
 import argparse
 from utils import GlobalConfig
 import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
-
-def calculate_accuracy(y_pred: list[int], y_true: list[int], percentage: bool = True) -> tuple[int, float]:
-    correct = 0
-    for pred, true in zip(y_pred, y_true):
-        if pred == true: correct += 1
-    
-    ratio = correct / len(y_true)
-    
-    return correct, round(ratio * 100, 4) if percentage else ratio
 
 
 def parse_args() -> argparse.Namespace:
@@ -89,6 +81,7 @@ def parse_args() -> argparse.Namespace:
         help="If set, existing output files will be overwritten. Otherwise, datasets for which results already exist will be skipped."
     )
 
+
     parsed_args = parser.parse_args()
     
     if "all" in parsed_args.datasets and len(parsed_args.datasets) > 1:
@@ -142,6 +135,7 @@ if __name__ == "__main__":
     
     # exit()
     hyperparameters_combinations = list(itertools.product(*hyperparameters))
+
     num_tests = len(hyperparameters_combinations) * len(dataset_names)
     
     
@@ -188,13 +182,13 @@ if __name__ == "__main__":
                 total_accuracy += fold_correct
 
             total_accuracy /= (len(y_pred) * dataset_loader.num_folds)            
-            
-            print(f"\tTotal accuracy: {TerminalColor.colorize(fold_accuracy, color='green', bold=True)}%")
-            results[test_name]["total_accuracy"] = round(total_accuracy * 100, 4)
+            total_accuracy_percent = round(total_accuracy * 100, 4)
+            print(f"\tTotal accuracy: {TerminalColor.colorize(total_accuracy_percent, color='green', bold=True)}%")
+            results[test_name]["total_accuracy"] = total_accuracy_percent
             results[test_name]["time"] = time.time() - experiment_start_time
         
             test_num += 1
         
         with open(output_path, "w+") as f:
-            json.dump(results, f)
+            f.write(pretty_json_format(results))
     
