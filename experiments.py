@@ -1,6 +1,6 @@
 # This script runs experiments using the K-IBL algorithm on specified datasets with various hyperparameter combinations.
 
-from k_ibl import KIBLearner, IBLHyperParameters, ReductionTechnique
+from k_ibl import KIBLearner, IBLHyperParameters, ReductionTechnique, WeightingTechnique
 import json
 import itertools
 from sklearn.neighbors import KNeighborsClassifier
@@ -69,6 +69,15 @@ def parse_args() -> argparse.Namespace:
     )
     
     parser.add_argument(
+        "--weighting",
+        nargs="+",
+        type=str,
+        default=["None"],
+        choices=WeightingTechnique.get_all_values() + ["all", "None"],
+        help="List of weighting techniques to use. Use None for no weighting."
+    )
+    
+    parser.add_argument(
         "--output_dir",
         type=str,
         default=GlobalConfig.DEFAULT_HYPERPARAM_RESULTS_PATH,
@@ -92,6 +101,12 @@ def parse_args() -> argparse.Namespace:
         parser.error("If 'all' is specified in similarity_metrics, no other metrics can be provided.")
     if "all" in parsed_args.voting_schemes and len(parsed_args.voting_schemes) > 1:
         parser.error("If 'all' is specified in voting_schemes, no other schemes can be provided.")
+    if "all" in parsed_args.weighting and len(parsed_args.weighting) > 1:
+        parser.error("If 'all' is specified in weighting, no other weighting techniques can be provided.")
+
+    
+    if parsed_args.weighting != ["None"]:
+        parsed_args.output_dir = GlobalConfig.DEFAULT_WEIGHTED_RESULTS_PATH
 
     os.makedirs(parsed_args.output_dir, exist_ok=True)
 
@@ -111,16 +126,20 @@ if __name__ == "__main__":
     
     k_values = args.ks
     
+    weight = args.weighting
+    some_weights = False if weight == ["None"] else True
     
+    if weight == ["all"]:
+        weight = WeightingTechnique.get_all_values() + ["None"]
     
     if args.similarity_metrics == ["all"] and args.voting_schemes == ["all"] and args.retention == ["all"]:
-        hyperparameters = IBLHyperParameters.get_all_values() + [k_values]
+        hyperparameters = IBLHyperParameters.get_all_values() + [k_values] + [weight]
     else:
         excluded_sim_metrics = [metric for metric in IBLHyperParameters.get_all_sim_metrics() if metric not in args.similarity_metrics] if args.similarity_metrics != ["all"] else []
         excluded_voting_schemes = [scheme for scheme in IBLHyperParameters.get_all_voting_schemes() if scheme not in args.voting_schemes] if args.voting_schemes != ["all"] else []
         excluded_retention = [policy for policy in IBLHyperParameters.get_all_retention_policies() if policy not in args.retention] if args.retention != ["all"] else []
         excluded_hyperparameters = excluded_sim_metrics + excluded_voting_schemes + excluded_retention
-        hyperparameters = IBLHyperParameters.get_all_values(exclude=excluded_hyperparameters) + [k_values]
+        hyperparameters = IBLHyperParameters.get_all_values(exclude=excluded_hyperparameters) + [k_values] + [weight]
     
     # Use of pre-implemented knn to double-check our results
     
@@ -135,7 +154,6 @@ if __name__ == "__main__":
     
     # exit()
     hyperparameters_combinations = list(itertools.product(*hyperparameters))
-
     num_tests = len(hyperparameters_combinations) * len(dataset_names)
     
     
@@ -151,8 +169,8 @@ if __name__ == "__main__":
         dataset_loader.load()
         
         results = {}
-        for metric, voting, retention, k in hyperparameters_combinations:
-            test_name = f"{metric}_{voting}_{k}_{retention}"
+        for metric, voting, retention, k, weight in hyperparameters_combinations:
+            test_name = f"{metric}_{voting}_{k}_{retention}{'_' + weight if some_weights else ''}"
             print(f"Test [{test_num} / {num_tests}]. Dataset: {TerminalColor.colorize(dataset_loader.dataset_name, color='yellow')}. Hyperparameters: {TerminalColor.colorize(test_name, color='orange', bold=True)}")
             ibl_learner = KIBLearner(
                 sim_metric=metric,
@@ -166,7 +184,7 @@ if __name__ == "__main__":
             experiment_start_time = time.time()
             for i, (df_train, df_test) in enumerate(dataset_loader):
                 fold_start_time = time.time()
-                y_pred = ibl_learner.KIBLAlgorithm(df_train, df_test)
+                y_pred = ibl_learner.KIBLAlgorithm(df_train, df_test, weighted=weight if weight != "None" else None)
                 fold_total_time = time.time() - fold_start_time
                 y_true = df_test[df_test.columns[-1]]
 

@@ -11,7 +11,7 @@ from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 import sklearn_relief as relief
 from sklearn.neighbors import KNeighborsClassifier
 
-class ReductionTechnique(Enum):
+class ReductionTechnique(str, Enum):
     ALL_KNN = "AllKNN"
     MCNN = "MCNN"
     ICF = "ICF"
@@ -21,9 +21,13 @@ class ReductionTechnique(Enum):
         return [member.value for member in cls]
     
     
-class WeightingTechnique(Enum):
+class WeightingTechnique(str, Enum):
     RELIEF = "relief"
     SFS = "SFS"
+    
+    @classmethod
+    def get_all_values(cls) -> list[str]:
+        return [member.value for member in cls]
 
 class IBLHyperParameters:
     class SimMetrics(str, Enum):
@@ -155,7 +159,7 @@ class KIBLearner:
             return Metrics.Base.cosine_dist(self.CD, instance)
         elif self.sim_metric == IBLHyperParameters.SimMetrics.IVDM:
             return self.ivdm_metric.compute(instance)
-    
+
     
     def return_nn(self, ordered_dist: np.ndarray) -> np.ndarray:
         """
@@ -310,7 +314,6 @@ class KIBLearner:
         self.__train(df=train_df) # Initialize concept descriptor
         
         weights = self._compute_weights(weighted)
-        # print(weights)
         self.CD = self.CD * np.append(weights, 1)
         
         if self.sim_metric == IBLHyperParameters.SimMetrics.IVDM:
@@ -327,9 +330,9 @@ class KIBLearner:
 
     
     def _compute_weights(self, weighted: WeightingTechnique):
-        if weighted == WeightingTechnique.RELIEF.value:
+        if weighted == WeightingTechnique.RELIEF:
             return self.relief()
-        elif weighted == WeightingTechnique.SFS.value:
+        elif weighted == WeightingTechnique.SFS:
             return self.SFS()
 
         return np.ones((self.CD.shape[1] - 1))

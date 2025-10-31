@@ -45,6 +45,23 @@ python stats.py --alpha 0.1 --datasets credit-a pen-based --test_name k-IBL_hype
 python stats.py --alpha 0.1 --datasets all --test_name k-IBL_hyperparameters_all_datasets
 
 
+# 4. Weighting Techniques
+echo "Starting weighting techniques experiments..."
+echo "Running weighting techniques experiments for the two main datasets..."
+python experiments.py --datasets credit-a pen-based --similarity_metrics euc --voting_schemes bc --retention ar --weighting all --ks 5
+
+echo "Running weighting techniques experiments for the two extra datasets..."
+python experiments.py --datasets vowel grid --similarity_metrics euc --voting_schemes bc --retention ar --weighting all --ks 5
+
+echo "Statistical tests for weighting techniques..."
+python stats.py --alpha 0.1 --datasets credit-a pen-based --test_name k-IBL_weighting_2_datasets --base_dir "res/weighted"
+python stats.py --alpha 0.05 --datasets credit-a pen-based --test_name k-IBL_weighting_2_datasets --base_dir "res/weighted"
+python stats.py --alpha 0.01 --datasets credit-a pen-based --test_name k-IBL_weighting_2_datasets --base_dir "res/weighted"
+python stats.py --alpha 0.1 --datasets all --test_name k-IBL_weighting_all_datasets --base_dir "res/weighted"
+python stats.py --alpha 0.05 --datasets all --test_name k-IBL_weighting_all_datasets --base_dir "res/weighted"
+python stats.py --alpha 0.01 --datasets all --test_name k-IBL_weighting_all_datasets --base_dir "res/weighted"
+
+
 # 4. SVM
 echo "Starting SVM experiments..."
 echo "Running SVM experiments for the two main datasets..."
