@@ -296,13 +296,15 @@ class DatasetVisualizer:
 
 if __name__ == "__main__":
     
+    os.makedirs(GlobalConfig.DEFAULT_COMPLETE_VISUALIZATIONS_PATH, exist_ok=True)
+    
     for df in ["credit-a", "pen-based", "vowel", "grid"]:            
         df_visualizer = DatasetVisualizer(
             dataset_name=df
         )
         
         _, _, fig = df_visualizer.visualize_df(num_dims=2, dim_reduction="pca", show=False)
-        plt.savefig(os.path.join(GlobalConfig.DEFAULT_REDUCTION_VISUALIZATIONS_PATH, f"{df_visualizer.df_loader.dataset_name}_original_pca.png"), dpi=300)
+        plt.savefig(os.path.join(GlobalConfig.DEFAULT_COMPLETE_VISUALIZATIONS_PATH, f"{df_visualizer.df_loader.dataset_name}_original_pca.png"), dpi=300)
         
         _, _, fig = df_visualizer.visualize_df(num_dims=2, dim_reduction="tsne", show=False)
-        plt.savefig(os.path.join(GlobalConfig.DEFAULT_REDUCTION_VISUALIZATIONS_PATH, f"{df_visualizer.df_loader.dataset_name}_original_tsne.png"), dpi=300)
+        plt.savefig(os.path.join(GlobalConfig.DEFAULT_COMPLETE_VISUALIZATIONS_PATH, f"{df_visualizer.df_loader.dataset_name}_original_tsne.png"), dpi=300)

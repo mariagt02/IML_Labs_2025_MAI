@@ -9,7 +9,7 @@ __all__ = ["AllKNN"]
 class AllKNN:
 
     @staticmethod
-    def reduce(data: np.ndarray, k: int, metric: Literal["euc", "cos", "ivdm"]="euc", ivdm_metric = Metrics.IVDM):
+    def reduce(data: np.ndarray, k: int, metric: Literal["euc", "cos", "ivdm"]="euc", ivdm_metric: Metrics.IVDM = None):
         
         # print(f'\nOriginal data shape: {data.shape}')
 
@@ -20,7 +20,21 @@ class AllKNN:
         elif metric == "cos":
             metric_func = Metrics.Base.cosine_dist
         elif metric == "ivdm":
-            metric_func = ivdm_metric.compute
+            if ivdm_metric is not None:
+                metric_func = ivdm_metric.compute
+            else:
+                # Iterate over the columns fo the data. If they are integer, then it is a discrete col. Otherwise, it is a continuous col
+                discrete_cols = []
+                continuous_cols = []
+                for col in range(data.shape[1]-1):
+                    col_element = data[0, col]
+                    if isinstance(col_element, np.integer):
+                        discrete_cols.append(col)
+                    elif isinstance(col_element, np.floating):
+                        continuous_cols.append(col)
+                metric_func = Metrics.IVDM(data, discrete_cols, continuous_cols)
+                metric_func = metric_func.compute
+                
         else:
             raise ValueError(f"Unknown metric: {metric}")
 
@@ -30,8 +44,11 @@ class AllKNN:
             instance = data[i, :]
             label = data[i, -1]
 
-            sorted_neighbours = metric_func(data, instance)[1:] # data[:, :-1]
-            # [1:] to skip the instance itself from the closest neighbors (nearest neighbor is itself, dist = 0)
+            if metric == "ivdm":
+                sorted_neighbours = metric_func(instance)[1:]
+                # [1:] to skip the instance itself from the closest neighbors (nearest neighbor is itself, dist = 0)
+            else:
+                sorted_neighbours = metric_func(data, instance)[1:]
 
             for j in range(k): # for each neighbour of the instance
                 
