@@ -1,2 +1,12 @@
-Friedman statistic: nan, p-value: nan
-Can we reject the null hypothesis (all algorithms are equivalent) at alpha=0.01? No
+Friedman statistic: 37.020618556701, p-value: 4.555391728666001e-08
+Can we reject the null hypothesis (all algorithms are equivalent) at alpha=0.01? Yes
+Null hypothesis has been rejected. This means that there is a significant difference between at least two algorithms.
+To find out which algorithms differ significantly, we perform the Nemenyi post-hoc test.
+euc_bc_5_ar_None      1.625
+euc_bc_5_ar_AllKNN    2.300
+euc_bc_5_ar_ICF       2.800
+euc_bc_5_ar_MCNN      3.275
+dtype: float64Number of significant pairwise differences found: 3
+	Significant difference between euc_bc_5_ar_AllKNN and euc_bc_5_ar_MCNN (p-value: 0.0041)
+	Significant difference between euc_bc_5_ar_MCNN and euc_bc_5_ar_None (p-value: 0.0000)
+	Significant difference between euc_bc_5_ar_ICF and euc_bc_5_ar_None (p-value: 0.0003)
