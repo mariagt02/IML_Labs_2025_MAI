@@ -48,10 +48,10 @@ python stats.py --alpha 0.1 --datasets all --test_name k-IBL_hyperparameters_all
 # 4. Weighting Techniques
 echo "Starting weighting techniques experiments..."
 echo "Running weighting techniques experiments for the two main datasets..."
-python experiments.py --datasets credit-a pen-based --similarity_metrics euc --voting_schemes mp --retention ar --weighting all --ks 3
+python experiments.py --datasets credit-a pen-based --similarity_metrics euc --voting_schemes bc --retention ar --weighting all --ks 5
 
 echo "Running weighting techniques experiments for the two extra datasets..."
-python experiments.py --datasets vowel grid --similarity_metrics euc --voting_schemes mp --retention ar --weighting all --ks 3
+python experiments.py --datasets vowel grid --similarity_metrics euc --voting_schemes bc --retention ar --weighting all --ks 5
 
 # 5. Statistical Tests for Weighting Techniques
 echo "Statistical tests for weighting techniques..."
@@ -67,10 +67,10 @@ python stats.py --alpha 0.01 --datasets all --test_name k-IBL_weighting_all_data
 echo "Starting reduction techniques experiments..."
 
 echo "Running reduction techniques experiments for the two main datasets..."
-python experiments.py --datasets credit-a pen-based --similarity_metrics euc --voting_schemes mp --retention ar --reduction_technique all --ks 3
+python experiments.py --datasets credit-a pen-based --similarity_metrics euc --voting_schemes bc --retention ar --reduction_technique all --ks 5
 
 echo "Running reduction techniques experiments for the two extra datasets..."
-python experiments.py --datasets vowel grid --similarity_metrics euc --voting_schemes mp --retention ar --reduction_technique all --ks 3
+python experiments.py --datasets vowel grid --similarity_metrics euc --voting_schemes bc --retention ar --reduction_technique all --ks 5
 
 
 # 7. Statistical Tests for Reduction Techniques
