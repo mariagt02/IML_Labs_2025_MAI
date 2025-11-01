@@ -1,0 +1,14 @@
+Friedman statistic: 53.44204851752021, p-value: 1.4756996603673985e-11
+Can we reject the null hypothesis (all algorithms are equivalent) at alpha=0.1? Yes
+Null hypothesis has been rejected. This means that there is a significant difference between at least two algorithms.
+To find out which algorithms differ significantly, we perform the Nemenyi post-hoc test.
+svm.svc_rbf_c_10.0_gamma-scale                     1.5000
+svm.svc_rbf_c_10.0_gamma-scale_reduction_AllKNN    2.1625
+svm.svc_rbf_c_10.0_gamma-scale_reduction_ICF       3.0000
+svm.svc_rbf_c_10.0_gamma-scale_reduction_MCNN      3.3375
+dtype: float64Number of significant pairwise differences found: 5
+	Significant difference between svm.svc_rbf_c_10.0_gamma-scale and svm.svc_rbf_c_10.0_gamma-scale_reduction_MCNN (p-value: 0.0000)
+	Significant difference between svm.svc_rbf_c_10.0_gamma-scale and svm.svc_rbf_c_10.0_gamma-scale_reduction_AllKNN (p-value: 0.0992)
+	Significant difference between svm.svc_rbf_c_10.0_gamma-scale and svm.svc_rbf_c_10.0_gamma-scale_reduction_ICF (p-value: 0.0000)
+	Significant difference between svm.svc_rbf_c_10.0_gamma-scale_reduction_MCNN and svm.svc_rbf_c_10.0_gamma-scale_reduction_AllKNN (p-value: 0.0003)
+	Significant difference between svm.svc_rbf_c_10.0_gamma-scale_reduction_AllKNN and svm.svc_rbf_c_10.0_gamma-scale_reduction_ICF (p-value: 0.0195)

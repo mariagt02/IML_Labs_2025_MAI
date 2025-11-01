@@ -93,7 +93,7 @@ pip install -r requirements.txt
 
 - `SVM.py`: Implements an Support Vector Machine (SVM) classifier using scikit-learn. It tests different kernels and hyperparameters on the selected datasets. The results are saved in JSON format for further analysis. It allows the experiments to be carried out in parallel for faster execution. `SVM.py -h`:
   ```code
-  usage: SVM.py [-h] [--dataset_dir DATASET_DIR] [--datasets DATASETS [DATASETS ...]] [--output_dir OUTPUT_DIR] [-o] [-s] [-w WORKERS]
+  usage: SVM.py [-h] [--dataset_dir DATASET_DIR] [--datasets DATASETS [DATASETS ...]] [--output_dir OUTPUT_DIR] [-o] [-s] [--reduction_technique {AllKNN,MCNN,ICF,all,None} [{AllKNN,MCNN,ICF,all,None} ...]] [-w WORKERS]
 
     SVM Experiments
 
@@ -107,6 +107,8 @@ pip install -r requirements.txt
                             Directory where output files will be saved.
     -o, --overwrite       If set, existing output files will be overwritten. Otherwise, datasets for which results already exist will be skipped.
     -s, --summary         If set, a summary of the results will be printed at the end.
+    --reduction_technique {AllKNN,MCNN,ICF,all,None} [{AllKNN,MCNN,ICF,all,None} ...]
+                            List of reduction techniques to use. Use 'all' to include all available techniques.
     -w WORKERS, --workers WORKERS
                             Number of parallel worker processes (default: number of CPU cores).
   ```

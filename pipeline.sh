@@ -85,7 +85,7 @@ python stats.py --alpha 0.01 --datasets all --test_name k-IBL_reduction_all_data
 # 6. SVM
 echo "Starting SVM experiments..."
 echo "Running SVM experiments for the two main datasets..."
-python SVM.py --datasets credit-a pen-based -s                                                                                                                                                                                            
+python SVM.py --datasets credit-a pen-based -s
 
 echo "Running SVM experiments for the two extra datasets..."
 python SVM.py --datasets vowel grid -s
@@ -95,6 +95,37 @@ echo "Starting statistical tests for svm..."
 python stats.py --alpha 0.1 --datasets credit-a pen-based --test_name SVM_2_datasets --base_dir "res/svm"
 python stats.py --alpha 0.1 --datasets all --test_name SVM_all_datasets --base_dir "res/svm"
 
+
+# 8. SVM with reduction techniques
+# Print in red color that in order to carry out this step, lines 246-248 in SVM.py must be commented out. The same for line 251.
+echo -e "\e[31mIMPORTANT: To carry out SVM with reduction techniques experiments, please comment out lines 246-248 and line 251 in SVM.py\e[0m"
+# Only allow to continue with this part of the pipeline if the user confirms
+read -p "Do you want to continue? (y/n): " choice
+if [[ "$choice" != "y" ]]; then
+    echo "Skipping SVM with reduction techniques experiments."
+    exit 0
+else
+    echo "Continuing with SVM with reduction techniques experiments."
+    # Say in color that we assume that the user has commented out the lines in SVM.py, otherwise, the results will be done for all SVM configurations, not for the best one.
+    echo -e "\e[32mAssuming that you have commented out the necessary lines in SVM.py...\e[0m"
+    echo "Starting SVM with reduction techniques experiments..."
+    echo "Running SVM with reduction techniques experiments for the two main datasets..."
+    python SVM.py --datasets credit-a pen-based --reduction_technique all -s --output_dir "res/svm_reduction"
+
+    echo "Running SVM with reduction techniques experiments for the two extra datasets..."
+    python SVM.py --datasets vowel grid --reduction_technique all -s --output_dir "res/svm_reduction"
+
+
+    # 9. Statistical Tests for SVM with reduction techniques
+    echo "Starting statistical tests for svm with reduction techniques..."
+    python stats.py --alpha 0.1 --datasets credit-a pen-based --test_name SVM_reduction_2_datasets --base_dir "res/svm_reduction"
+    python stats.py --alpha 0.01 --datasets credit-a pen-based --test_name SVM_reduction_2_datasets --base_dir "res/svm_reduction"
+    python stats.py --alpha 0.05 --datasets credit-a pen-based --test_name SVM_reduction_2_datasets --base_dir "res/svm_reduction"
+    python stats.py --alpha 0.1 --datasets all --test_name SVM_reduction_all_datasets --base_dir "res/svm_reduction"
+    python stats.py --alpha 0.01 --datasets all --test_name SVM_reduction_all_datasets --base_dir "res/svm_reduction"
+    python stats.py --alpha 0.05 --datasets all --test_name SVM_reduction_all_datasets --base_dir "res/svm_reduction"
+
+fi
 
 # Visualizations for the reduction techniques on the different datasets and the complete datasets
 

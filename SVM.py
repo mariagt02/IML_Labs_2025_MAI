@@ -9,9 +9,11 @@ from utils import GlobalConfig, TerminalColor, calculate_accuracy, pretty_json_f
 import os
 import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from k_ibl import ReductionTechnique
+from red_techniques import Reductor
 
 
-def format_test_name(kernel_name: str, params: dict[str, Any], c: float) -> str:
+def format_test_name(kernel_name: str, params: dict[str, Any], c: float, reduction: str) -> str:
     """
     Formats a test name for SVM experiments based on kernel, parameters, and C value.
     
@@ -33,10 +35,12 @@ def format_test_name(kernel_name: str, params: dict[str, Any], c: float) -> str:
         param_list.append(f"{k}-{v_str}")
     
     param_str = "_".join(param_list)
-    
+
     key = f"svm.svc_{kernel_name}_c_{c}"
     if param_str:
         key += f"_{param_str}"
+        
+    key += f"_reduction_{reduction}" if reduction != "None" else ""
     return key
 
 def svmAlgorithm(
@@ -125,7 +129,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="If set, a summary of the results will be printed at the end."
     )
-    
+
+    parser.add_argument(
+        "--reduction_technique",
+        nargs="+",
+        type=str,
+        default=["None"],
+        choices=ReductionTechnique.get_all_values() + ["all", "None"],
+        help="List of reduction techniques to use. Use 'all' to include all available techniques."
+    )
+
     parser.add_argument(
         "-w", "--workers",
         type=int,
@@ -137,6 +150,8 @@ def parse_args() -> argparse.Namespace:
     
     if "all" in parsed_args.datasets and len(parsed_args.datasets) > 1:
         parser.error("If 'all' is specified in datasets, no other dataset names can be provided.")
+    if "all" in parsed_args.reduction_technique and len(parsed_args.reduction_technique) > 1:
+        parser.error("If 'all' is specified in reduction_technique, no other techniques can be provided.")
     
     os.makedirs(parsed_args.output_dir, exist_ok=True)
 
@@ -144,17 +159,29 @@ def parse_args() -> argparse.Namespace:
 
 
 
-def run_single_test(dataset: str, kernel_name: str, params: dict, c: float, dataset_dir: str) -> tuple[str, str, dict]:
+def run_single_test(dataset: str, kernel_name: str, params: dict, c: float, dataset_dir: str, reduction: ReductionTechnique) -> tuple[str, str, dict]:
     dataset_loader = DatasetLoader(dataset_name=dataset, dataset_dir=dataset_dir)
     dataset_loader.load()
     
-    test_name = format_test_name(kernel_name, params, c)
+    test_name = format_test_name(kernel_name, params, c, reduction)
     
     fold_results_for_kernel = {}
     fold_accuracy_ratios = []
     
     experiment_start_time = time.time()
     for i, (df_train, df_test) in enumerate(dataset_loader):
+        cols = df_train.columns.tolist()
+        df_train = df_train.to_numpy()
+        if reduction == ReductionTechnique.ALL_KNN:
+            df_train = Reductor.ALLKNN.reduce(data=df_train, k=5, ivdm_metric=None, metric="euc")
+        elif reduction == ReductionTechnique.ICF:
+            df_train = Reductor.ICF.reduce(data=df_train, k=5)
+        elif reduction == ReductionTechnique.MCNN:
+            df_train = Reductor.MCNN.reduce(data=df_train)
+        
+        # Not the most intelligent approach (convert to numpy to reduce, then back to DataFrame), but it works for now.
+        df_train = pd.DataFrame(df_train, columns=cols)
+        
         accuracy_ratio, y_true, y_pred, fold_time = svmAlgorithm(
             df_train, 
             df_test,
@@ -186,7 +213,10 @@ if __name__ == "__main__":
     else:
         dataset_names = args.datasets
     
-    
+    reduction = args.reduction_technique
+    if reduction == ["all"]:
+        reduction = ReductionTechnique.get_all_values() + ["None"]
+
     
     kernel_configs = [
         ("linear", {}),
@@ -213,9 +243,13 @@ if __name__ == "__main__":
         ("sigmoid", {"coef0": 1.0, "gamma": "scale"}),
         ("sigmoid", {"coef0": 1.0, "gamma": "auto"}),
     ]
+    # kernel_configs = [
+    #     ("rbf", {"gamma": "scale"}),
+    # ] # Uncomment to test for the best SVM configuration
     
     Cs = [0.1, 1.0, 10.0]
-    param_combs = list(itertools.product(*[kernel_configs, Cs]))
+    # Cs = [10.0] # Uncomment to test for the best SVM configuration
+    param_combs = list(itertools.product(*[kernel_configs, Cs, reduction]))
 
     
     num_tests = len(param_combs) * len(dataset_names)
@@ -229,8 +263,9 @@ if __name__ == "__main__":
             print(f"{TerminalColor.colorize('Skipping', color='red', bold=True)} dataset {TerminalColor.colorize(dataset, color='yellow')}")
             continue
 
-        for (kernel_name, params), c in param_combs:
-            tasks.append((dataset, kernel_name, params, c))
+        for (kernel_name, params), c, reduction in param_combs:
+            
+            tasks.append((dataset, kernel_name, params, c, reduction))
 
     print(f"{TerminalColor.colorize('Running', color='green', bold=True)} {len(tasks)} tests in parallel using {TerminalColor.colorize(str(args.workers), color='yellow')} workers...")
 
@@ -239,8 +274,8 @@ if __name__ == "__main__":
 
     with ProcessPoolExecutor(max_workers=args.workers) as executor:
         futures = {
-            executor.submit(run_single_test, dataset, kernel, params, c, args.dataset_dir): (dataset, kernel)
-            for (dataset, kernel, params, c) in tasks
+            executor.submit(run_single_test, dataset, kernel, params, c, args.dataset_dir, reduction): (dataset, kernel)
+            for (dataset, kernel, params, c, reduction) in tasks
         }
 
         for test_num, future in enumerate(as_completed(futures), start=1):
