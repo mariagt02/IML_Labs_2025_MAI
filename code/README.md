@@ -1,5 +1,16 @@
 # IML_Labs_2025_MAI
 
+> <span style="color:red">**NOTE:** The paths are specified assuming that the code is executed from the root directory where the code files are stored.</span> 
+
+
+Natalia Muñoz Moruno: natalia.munoz@estudiantat.upc.edu
+
+Helena Sánchez Ulloa: helena.sanchez@estudiantat.upc.edu
+
+Maria Guasch Torres: maria.guasch.t@estudiantat.upc.edu
+
+Andreu Garcies Ramon: andreu.garcies@estudiantat.upc.edu
+
 ## Environment Setup
 
 The python version used for this project is 3.11.13. To create a virtual environment and install the required packages, run the following commands:
@@ -11,6 +22,10 @@ pip install -r requirements.txt
 ```
 
 ## File Structure
+
+- `pipeline.sh`: A shell script to automate the execution of the different parts of the project, including data preprocessing, model training, evaluation, and statistical analysis. It calls the relevant Python scripts with appropriate arguments based on the analysis that we have carried out to obtain the results shown in the report. It can be executed from the command using:
+    - `bash pipeline.sh`
+    - `./pipeline.sh` (after giving execute permissions with `chmod u+x pipeline.sh`)
 
 - `stats.py`: Contains code and classes to perform statistical analysis and visualize results. It can be run from the command line with various options. `stats.py -h`:
 
@@ -113,9 +128,20 @@ pip install -r requirements.txt
                             Number of parallel worker processes (default: number of CPU cores).
   ```
 
-- `pipeline.sh`: A shell script to automate the execution of the different parts of the project, including data preprocessing, model training, evaluation, and statistical analysis. It calls the relevant Python scripts with appropriate arguments based on the analysis that we have carried out to obtain the results shown in the report. It can be executed from the command using:
-    - `bash pipeline.sh`
-    - `./pipeline.sh` (after giving execute permissions with `chmod u+x pipeline.sh`)
-
 - `requirements.txt`: Lists the Python packages required for the project.
 - `utils.py`: Contains utility functions used across different scripts in the project.
+- `preprocessing.py`: Contains the required code to perform the preprocessing of the datasets. `preprocessing.py -h`:
+  ```code
+    usage: Dataset preprocessor [-h] [--datasets DATASETS [DATASETS ...]] [--input_path INPUT_PATH] [--output_path OUTPUT_PATH]
+
+    A simple Python script for preprocessing datasets used in the Master's in Artificial Intelligence course: Introduction to Machine Learning
+
+    options:
+    -h, --help            show this help message and exit
+    --datasets DATASETS [DATASETS ...]
+                            Names of specific datasets to preprocess. If not provided, all datasets in the input folder will be processed.
+    --input_path INPUT_PATH
+                            Path to the folder containing the datasets. Default is 'data'.
+    --output_path OUTPUT_PATH
+                            Path where preprocessed datasets will be saved. Default is 'preprocessed'.
+  ```
