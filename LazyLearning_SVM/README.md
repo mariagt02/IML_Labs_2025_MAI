@@ -1,4 +1,4 @@
-# IML_Labs_2025_MAI
+# Work 2. Classification with Lazy Learning and SVMs.
 
 > <span style="color:red">**NOTE:** The paths are specified assuming that the code is executed from the root directory where the code files are stored.</span> 
 
@@ -11,15 +11,6 @@ Maria Guasch Torres: maria.guasch.t@estudiantat.upc.edu
 
 Andreu Garcies Ramon: andreu.garcies@estudiantat.upc.edu
 
-## Environment Setup
-
-The python version used for this project is 3.11.13. To create a virtual environment and install the required packages, run the following commands:
-
-```bash
-python3.11 -m venv <path_to_venv>
-source <path_to_venv>/bin/activate  # On Windows use `<path_to_venv>\Scripts\activate`
-pip install -r requirements.txt
-```
 
 ## File Structure
 
