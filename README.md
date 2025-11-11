@@ -27,7 +27,7 @@ pip install -r requirements.txt
 
 The repository is organized into two main folders, one for each of the two projects developed:
 
--`LazyLearning_SVM/`: Contains the code for Work 2: Classification with Lazy Learning and SVMs.
+- `LazyLearning_SVM/`: Contains the code for Work 2: Classification with Lazy Learning and SVMs.
 - `Clustering_Visualization/`: Contains the code for Work 3: Clustering and Visualization.
 
 See the respective `README.md` files in each folder for detailed information about the implementation, usage instructions, and file structure for each project.
