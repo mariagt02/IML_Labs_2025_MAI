@@ -1,0 +1,119 @@
+\documentclass[eng]{report_template}
+%
+
+\usepackage{xurl}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{dblfloatfix}
+\usepackage{lipsum}  % for example text
+\usepackage{float}
+\usepackage{cuted}
+\usepackage{chngcntr} % for \counterwithin
+\usepackage{lipsum}
+\usepackage{longtable}
+\usepackage{supertabular}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{pdfpages}
+\usepackage[
+backend=biber,
+style=numeric,
+sorting=none
+]{biblatex}
+\addbibresource{references.bib}
+\usepackage{breqn}
+
+% Redefine the \footnoterule to move footnotes below the line of the page numbers
+\renewcommand{\footnoterule}{%
+  \vspace*{-0.5\baselineskip}  % Adjust the vertical space as needed
+  \noindent\rule{0.4\columnwidth}{0.4pt}\vspace*{0.5\baselineskip}
+}
+% Define the format for figure references
+\captionsetup[figure]{name=Figure}
+% Publication Title
+\title{Introduction to Machine Learning: Work 3. Clustering and Visualization.}
+
+
+% Publication Title (Portuguese only)
+% \titulo{Instruções para os autores da Academic Journal on Computing, Engineering and Applied Mathematics}
+
+% Short title for the header (copy the main title if it is not too long)
+\shorttitle{}
+
+% Authors
+\author[1]{Andreu Garcies Ramon}
+\author[1]{Maria Guasch Torres}
+\author[1]{Natalia Muñoz Moruno}
+\author[1]{Helena Sánchez Ulloa}
+
+% Author Affiliations
+\affil[1]{Master in Artificial Intelligence, Universitat Politècnica de Catalunya UPC, Barcelona, Catalonia.}
+
+% Surname of the first author of the manuscript
+\firstauthor{H. Sánchez, N. Muñoz, M. Guasch, A. Garcies}
+
+% Place your particular definitions here
+\newcommand{\vect}[1]{\mathbf{#1}}  % vectors
+
+% Insert here the abstract in English language
+\abstract{\lipsum[1]}
+
+
+% Insert here the keywords of your work in English language
+\keywords{}
+
+\usepackage{textcomp} % For \textregistered command
+
+\lstdefinestyle{terminal}{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{gray!10},
+    frame=single,
+    breaklines=true,
+    showstringspaces=false
+}
+
+
+
+% Start document
+\begin{document}
+
+% Include title, authors, abstract, etc.
+\maketitle
+
+% \thispagestyle{fancy}
+%\printcontactdata
+
+\onecolumn
+
+% Main body of manuscript
+
+\section{Introduction}
+
+\include{datasets}
+\include{methods}
+\include{results}
+\include{discussion}
+
+
+
+
+
+
+\section{Conclusions}
+
+\lipsum[2]
+
+% Include references
+% % \insertbibliography{references}
+\printbibliography
+
+% Redefine the figure counter to use A.1, A.2, etc.
+
+
+\end{document}

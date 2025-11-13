@@ -1,0 +1,129 @@
+\section{Datasets}
+\subsection{Credit Approval}
+The first dataset chosen is Credit Approval, from now on denoted as \textit{credit-a}, from the UCI repository \cite{credit-a}. This dataset contains 690 instances and 15 features and is used for classification. Specifically, it contains data from credit card applications, combining continuous and categorical attributes. It also contains missing values.
+
+However, the names and values of the attributes have been encrypted to protect confidentiality. For this reason, the official source \cite{credit-a} does not indicate what each attribute consists of. However, based on \cite{githubcredita} and inference of the values, it is hypothesized that each feature corresponds to the descriptions listed in Table \ref{tab:credit-a}.
+
+Finally, as can be seen in Table \ref{tab:credit_a2}, it is a binary classification problem with classes representing whether the credit has been approved or not, and the classes are fairly balanced, with 55.51\% of the samples representing class `-' and 44.49\% of the samples representing class `+' \cite{credit-a}.
+
+\begin{table*}[]
+\centering
+% \resizebox{\textwidth}{!}{%
+\begin{tabular}{|
+>{\columncolor[HTML]{EFEFEF}}c |c|l|c|}
+\hline
+\textbf{Variable} &
+  \cellcolor[HTML]{EFEFEF}\textbf{Type} &
+  \multicolumn{1}{c|}{\cellcolor[HTML]{EFEFEF}\textbf{Description}} &
+  \cellcolor[HTML]{EFEFEF}\textbf{Missing values} \\ \hline
+A1  & Categorical & Gender \{b, a\}                            & Yes \\ \hline
+A2  & Continuous  & Age in years                               & Yes \\ \hline
+A3  & Continuous  & Debt ratio                                 & No  \\ \hline
+A4  & Categorical & Marital status \{u, y, l, t\}              & Yes \\ \hline
+A5  & Categorical & Bank Customer \{g, p, gg\}                 & Yes \\ \hline
+A6 &
+  Categorical &
+  Education level \{c, d, cc, i, j, k, m, r, q, w, x, e, aa, ff\} &
+  Yes \\ \hline
+A7  & Categorical & Ethnicity \{v, h, bb, j, n, z, dd, ff, o\} & Yes \\ \hline
+A8  & Continuous  & Years Employed                             & No  \\ \hline
+A9  & Categorical & Prior Default \{t, f\}                     & No  \\ \hline
+A10 & Categorical & Employed \{t, f\}                          & No  \\ \hline
+A11 & Continuous  & Credit Score                               & No  \\ \hline
+A12 & Categorical & Drivers License \{t, f\}                   & No  \\ \hline
+A13 & Categorical & Citizen \{g, p, s\}                        & No  \\ \hline
+A14 & Continuous  & Income                                     & Yes \\ \hline
+A15 & Continuous  & Zip Code                                   & No  \\ \hline
+\end{tabular}%
+% }
+\caption{Credit Approval dataset feature description.}
+\label{tab:credit-a}
+\end{table*}
+
+\begin{table}[]
+\centering
+% \resizebox{\columnwidth}{!}{%
+\begin{tabular}{|
+>{\columncolor[HTML]{EFEFEF}}c |c|c|}
+\hline
+\textbf{Class} & \cellcolor[HTML]{EFEFEF}\textbf{Num. of instances} & \cellcolor[HTML]{EFEFEF}\textbf{Percentage (\%)} \\ \hline
+\textbf{+}     & 307                                                & 44,49                                            \\ \hline
+\textbf{-}     & 383                                                & 55,51                                            \\ \hline
+\end{tabular}%
+% }
+\caption{Output of Credit Approval dataset}
+\label{tab:credit_a2}
+\end{table}
+\subsection{Pen-Based Recognition of Handwritten Digits}
+For the second dataset, Pen-Based Recognition of Handwritten Digits \cite{penbased}, from now on denoted as \textit{pen-based}, was chosen. This dataset consists of a database of digits from 44 different writers, with a total of 10,992 instances. To capture how people write numbers, a digitizing tablet (WACOM PL-100V) was used, with a sampling frequency of 100 ms and a resolution of $500\times 500$ pixels. The data captured by the tablet were the $x$ and $y$ coordinates and the pressure level of the pen; however, the latter was ignored in the dataset.
+
+After capturing the points, the coordinates were normalized, making the digits comparable. To do this, translation was eliminated by centering, and the scale was eliminated so that all digits had the same relative size.
+
+One of the problems encountered was that the digits had a different number of captured points. However, in order to use the data in classifiers, all digits must have the same vector size. To achieve this, spatial resampling was used. This method uses linear interpolation to obtain a sequence of equally spaced points in arc lenght, with the digits represented in a 2T-dimensional vector. After testing several values for T, they found that $T=8$ presented the best balance between accuracy and complexity. Thus, this dataset contains 16 features.
+
+As can be seen in Table \ref{tab:penbased_output}, there are 10 different classes, representing the digits 0 to 9, which are fairly balanced.
+
+\subsection{TAO-Grid}
+The TAO-Grid dataset, from now on denoted as \textit{grid}, was used for statistical analysis purposes and consists of a two-dimensional geometric pattern inspired by the Yin-Yang symbol. Each instance corresponds to a point on the plane ($x, y$ coordinates) and it is assigned a class label (\texttt{black} or \texttt{white}). The dataset consists of 1888 instances and 2 features.
+
+\subsection{Vowel}
+
+This dataset was used for statistical analysis and consists of 990 instances and 12 features. One feature indicates whether the instance belongs to the training or test set, another identifies the speaker (15 in total), other the gender and the other remaining correspond to real values \cite{vowel}. The labels represent 11 classes of English vowels, coded as “h+d” with a central vowel.
+
+\begin{table}[]
+\centering
+% \resizebox{\columnwidth}{!}{%
+\begin{tabular}{|
+>{\columncolor[HTML]{EFEFEF}}l |c|c|}
+\hline
+\multicolumn{1}{|c|}{\cellcolor[HTML]{EFEFEF}\textbf{Class}} & \cellcolor[HTML]{EFEFEF}\textbf{Num. of instances} & \cellcolor[HTML]{EFEFEF}\textbf{Percentage(\%)} \\ \hline
+0 & 1143 & 10,39 \\ \hline
+1 & 1143 & 10,39 \\ \hline
+2 & 1144 & 10,41 \\ \hline
+3 & 1055 & 9,59  \\ \hline
+4 & 1144 & 10,41 \\ \hline
+5 & 1055 & 9,59  \\ \hline
+6 & 1056 & 9,61  \\ \hline
+7 & 1142 & 10,39 \\ \hline
+8 & 1055 & 9,59  \\ \hline
+9 & 1055 & 9,59  \\ \hline
+\end{tabular}%
+% }
+\caption{Output of Pen-based dataset}
+\label{tab:penbased_output}
+\end{table}
+
+\subsection{Preprocessing}
+For data preprocessing, the training and test files were first merged. This step was necessary to apply the same preprocessing to all folds, which requires the entire dataset to compute global statistics, such as feature means. To do this, the function \texttt{merge\_fold} was implemented. Additionally, this function also removes instances with more than three missing values, as these were considered to contain excessive missing data for relaible imputation. After this initial step, the \textit{credit-a} dataset contained 684 examples while \textit{pen-based} remained the same as it had no missing values.
+
+Next, the remaining missing values were imputed. On the one hand, in the case of categorical data, two methods were implemented: KNNImputer and imputation using the most frequent value. In the first method, imputation is performed using the k-NN, so that the average value of these is used to impute the missing value. It should be noted that two instances are defined as similar if the features that are not missing present similar values \cite{knnim}
+. This method was implemented using the \texttt{KNNImputer} \cite{knnim} class from scikit-learn\footnote{https://scikit-learn.org/stable/}. The second method simply replaces the missing value with the most frequent value in the column. In this case, the SimpleImputer function \cite{simpleimputer} from scikit-learn was used, with the \texttt{most\_frequent} strategy.
+
+On the other hand, for the imputation of numerical data, the scikit-learn's \texttt{SimpleImputer} function \cite{simpleimputer} was again used. This method allows data to be imputed based on the mean, median, most frequent value, and a constant value.
+
+For the normalization of numerical data, scikit-learn's \texttt{MinMaxScaler} \cite{minmaxscaler} was used. This transformation scales the data to a given range, in our case [0,1]. The transition is given by Equation~\ref{eq:min_max_scaled}.
+\begin{equation}\label{eq:min_max_scaled}
+    X_{\text{scaled}} = X_{\text{std}} \cdot (\,\text{max} - \text{min}\,) + \text{min}.
+\end{equation}
+
+The categorical variables were coded using One Hot encoding, transforming each categorical feature into multiple binary columns, representing the different classes. To do this, the \texttt{OneHotEncoder} \cite{onehot} function from scikit-learn was used. It should be noted that for features that were already binary initially, \texttt{LabelEncoder} \cite{le}, also from scikit-learn, was used instead, converting the classes to 0 and 1.
+
+Finally, the preprocessed data was separated again into training and test for all folds.
+
+Among the different preprocessing methods implemented, \texttt{KNNImputer} was selected for imputing categorical data, as it better preserves the structure of the data by studying the correlation between instances. For the imputation of numerical data, the median was chosen, as it is a robust measure of central tendency and is less affected by outliers.
+
+For the \textit{credit-a} dataset, given that it had missing values, imputation and normalization were performed. Figure~\ref{fig:credit_a_original} shows the resulting dataset, reduced to two dimensions using t-SNE\footnote{t-Distributed Stochastic Neighbor Embedding (t-SNE) is a nonlinear dimensionality-reduction algorithm used to visualize high-dimensional data in two or three dimensions~\cite{maaten2008visualizing}.}. In the case of \textit{pen-based}, as there were no missing values, only its attributes were normalized. Figure~\ref{fig:pen-based_original} shows the two-dimensional representation of the preprocessed data.
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[width=\linewidth]{img/credit-a_original_tsne.png}
+    \caption{Two-dimensional visualization of the \textit{credit-a} dataset.}
+    \label{fig:credit_a_original}
+\end{figure}
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[width=\linewidth]{img/pen-based_original_tsne.png}
+    \caption{Two-dimensional visualization of the \textit{pen-based} dataset.}
+    \label{fig:pen-based_original}
+\end{figure}

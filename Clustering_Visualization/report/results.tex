@@ -1,0 +1,31 @@
+\section{Results}
+
+The code for the project is available at: \url{https://github.com/mariagt02/IML_Labs_2025_MAI}.
+
+All the times reported in this section were obtained using a computer running Ubuntu on an AMD Ryzen 9 7900X 12-core processor. Therefore, the particular results may vary when executed on different hardware or software environments. Nevertheless, the relative performance differences between models should remain consistent.
+
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{0.95}
+\begin{tabular}{lc}
+\toprule
+\textbf{Model (top 5)} & \textbf{Average Rank} \\
+\midrule
+\texttt{euc\_mp\_3\_ar} & 22.75 \\
+\texttt{euc\_bc\_5\_ar} & 23.04 \\
+\texttt{euc\_bc\_7\_dd} & 23.19 \\
+\texttt{euc\_bc\_5\_dd} &  23.86 \\
+\texttt{euc\_bc\_5\_dc} & 23.99 \\
+\midrule
+\multicolumn{2}{c}{\cellcolor[HTML]{EFEFEF}\textbf{Friedman Test Summary}} \\
+\midrule
+Statistic & 339.26 \\
+$p$-value & $1.27\times 10^{-36}$ \\
+\textbf{Reject $H_0$ at $\alpha = 0.1$?} & \textbf{Yes} \\
+\bottomrule
+\end{tabular}
+\caption{Results of the Friedman and Nemenyi statistical tests for different k-IBL hyperparameter configuration, in terms of accuracy. Average ranks correspond to the Nemenyi post-hoc analysis ($\alpha = 0.1$).}
+\label{tab:test_results_ibl_hyperparameters}
+\end{table}
